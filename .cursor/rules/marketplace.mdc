@@ -1,0 +1,26 @@
+---
+description: Marketplace repo — Cursor uses .cursor copy of Claude skills, rules, conventions
+alwaysApply: true
+---
+
+# Cursor workspace
+
+- Project context: `.cursor/CLAUDE.md` (copy of `.claude/CLAUDE.md`).
+- **Skills:** `.cursor/skills/<topic>/SKILL.md` — follow before that kind of work. They reference repo-root `_CONVENTIONS/...`; an identical tree also exists at `.cursor/_CONVENTIONS/` (keep both in sync if you edit conventions).
+- **Agents:** `.cursor/agents/*.md`
+- **Rules (from Claude Code):** `.cursor/rules-claude/*.md`
+- **Scripts:** `.cursor/scripts/`
+
+Do not rely on editing `.claude/` for Cursor; use this `.cursor/` tree. Originals remain under `.claude/` and `_CONVENTIONS/` for anyone still on Claude Code.
+
+## ClickUp — team workplace
+
+Use **ClickUp** as the shared workplace for this repo. Prefer the **ClickUp MCP** (`user-clickup`) for tasks, hierarchy, and updates when the user asks.
+
+| | |
+|--|--|
+| **Workspace (team) ID** | `90182625652` |
+| **Primary space** | **AI Marketplace** |
+| **Space ID** | `901810655343` |
+
+The space is organized into folders (e.g. Database & Infrastructure, Core Marketplace, Transactions, Communication, AI Engine, Admin Panel, Frontend) with lists under each. When unsure where work belongs, confirm with the user or infer from folder/list names above.

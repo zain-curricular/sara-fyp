@@ -1,0 +1,25 @@
+## Warning: File Names Are Locked
+
+The files in this directory are **dynamically injected** into a Claude Code skill at invocation time.
+
+One skill references these files by exact path:
+
+- `.claude/skills/security/SKILL.md`
+
+### Rules
+
+- **Do not rename or move files.** The skill uses hardcoded `cat` commands against the current file names. Renaming a file will silently break injection — the skill will still invoke, but with missing content.
+- **Do not add or remove files** without updating the corresponding skill SKILL.md to match.
+- **Editing content is fine.** Changes are picked up automatically on next skill invocation.
+
+### Currently Referenced Files
+
+```
+_CONVENTIONS/security/
+├── 1-START-HERE.md                  ← security skill
+├── 2-injection-and-validation.md    ← security skill
+├── 3-authentication-and-access.md   ← security skill
+├── 4-data-and-cryptography.md       ← security skill
+├── 5-application-hardening.md       ← security skill
+└── 6-supply-chain.md               ← security skill
+```
