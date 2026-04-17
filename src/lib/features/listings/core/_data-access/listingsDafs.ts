@@ -85,6 +85,27 @@ export async function getListingById(
 }
 
 /**
+ * Batch load non-deleted listings by id (order not preserved — callers reorder).
+ */
+export async function listListingsByIds(
+	ids: string[],
+): Promise<{ data: ListingRow[] | null; error: unknown }> {
+	if (ids.length === 0) {
+		return { data: [], error: null }
+	}
+	const { data, error } = await getAdmin()
+		.from('listings')
+		.select('*')
+		.in('id', ids)
+		.is('deleted_at', null)
+
+	if (error) {
+		logDatabaseError('listings:listListingsByIds', { count: ids.length }, error)
+	}
+	return { data: data as ListingRow[] | null, error }
+}
+
+/**
  * Hard-deletes a listing row (valid only for `draft` per RLS — caller enforces).
  */
 export async function deleteListing(id: string): Promise<{ error: unknown }> {

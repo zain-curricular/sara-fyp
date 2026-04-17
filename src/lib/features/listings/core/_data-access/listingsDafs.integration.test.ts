@@ -15,6 +15,7 @@ import {
 import {
 	deleteListing,
 	getListingById,
+	listListingsByIds,
 	listListingsByUserId,
 	searchListings,
 } from './listingsDafs'
@@ -80,6 +81,12 @@ describe.skipIf(!canRunSupabaseIntegrationTests)('listingsDafs', () => {
 		expect(error).toBeNull()
 		const ids = (data ?? []).map((r) => r.id)
 		expect(ids).toContain(listingId)
+	})
+
+	it('listListingsByIds returns the listing', async () => {
+		const { data, error } = await listListingsByIds([listingId])
+		expect(error).toBeNull()
+		expect(data?.map((l) => l.id)).toContain(listingId)
 	})
 
 	it('searchListings finds active listing by platform', async () => {

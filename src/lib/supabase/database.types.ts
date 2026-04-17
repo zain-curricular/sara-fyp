@@ -143,6 +143,8 @@ export type ListingRow = {
 	created_at: string
 	updated_at: string
 	deleted_at: string | null
+	/** Denormalized favorites count (see 20260418000003_favorites_viewed_refinements.sql). */
+	favorite_count: number
 }
 
 /**
@@ -155,6 +157,26 @@ export type ListingImageRow = {
 	url: string
 	position: number
 	created_at: string
+}
+
+/**
+ * `favorites` row — wishlist junction (20260416000009_social.sql).
+ */
+export type FavoriteRow = {
+	id: string
+	user_id: string
+	listing_id: string
+	created_at: string
+}
+
+/**
+ * `viewed_listings` row — browse history (20260416000009_social.sql).
+ */
+export type ViewedListingHistoryRow = {
+	id: string
+	user_id: string
+	listing_id: string
+	viewed_at: string
 }
 
 /**
@@ -230,6 +252,18 @@ export type Database = {
 				Row: SubscriptionRow
 				Insert: Partial<SubscriptionRow> & Pick<SubscriptionRow, 'user_id'>
 				Update: Partial<SubscriptionRow>
+				Relationships: []
+			}
+			favorites: {
+				Row: FavoriteRow
+				Insert: Partial<FavoriteRow> & Pick<FavoriteRow, 'user_id' | 'listing_id'>
+				Update: Partial<FavoriteRow>
+				Relationships: []
+			}
+			viewed_listings: {
+				Row: ViewedListingHistoryRow
+				Insert: Partial<ViewedListingHistoryRow> & Pick<ViewedListingHistoryRow, 'user_id' | 'listing_id'>
+				Update: Partial<ViewedListingHistoryRow>
 				Relationships: []
 			}
 		}

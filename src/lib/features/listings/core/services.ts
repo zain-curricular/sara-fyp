@@ -8,6 +8,7 @@ export {
 	createListing,
 	updateListingById,
 	getListingById,
+	listListingsByIds,
 	deleteListing,
 	countActiveListingsForUser,
 	searchListings,
