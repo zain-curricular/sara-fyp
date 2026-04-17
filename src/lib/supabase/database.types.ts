@@ -8,7 +8,8 @@
 //
 // Scope
 // -----
-// Tables: profiles, product catalog, listings, listing_images, subscriptions (slice).
+// Tables: profiles, product catalog, listings, listing_images, subscriptions,
+// orders, reviews, favorites, viewed_listings (slice).
 
 /**
  * Full `profiles` row — mirrors public.profiles including refinements migration.
@@ -55,6 +56,61 @@ export type SaleType = 'fixed' | 'auction' | 'both'
 export type ItemCondition = 'new' | 'like_new' | 'excellent' | 'good' | 'fair' | 'poor'
 
 export type SubscriptionTier = 'free' | 'premium' | 'wholesale'
+
+/** `order_status` enum — 20260416000001_enums.sql */
+export type OrderStatus =
+	| 'awaiting_payment'
+	| 'payment_received'
+	| 'shipped_to_center'
+	| 'under_testing'
+	| 'testing_complete'
+	| 'approved'
+	| 'rejected'
+	| 'shipped_to_buyer'
+	| 'delivered'
+	| 'completed'
+	| 'cancelled'
+	| 'refunded'
+
+/**
+ * `orders` row — 20260416000006_orders_escrow.sql (columns used by reviews flow).
+ */
+export type OrderRow = {
+	id: string
+	listing_id: string
+	buyer_id: string
+	seller_id: string
+	amount: number
+	status: OrderStatus
+	shipping_tracking_to_center: string | null
+	shipping_tracking_to_buyer: string | null
+	paid_at: string | null
+	shipped_to_center_at: string | null
+	received_at_center_at: string | null
+	testing_completed_at: string | null
+	approved_at: string | null
+	rejected_at: string | null
+	shipped_to_buyer_at: string | null
+	delivered_at: string | null
+	completed_at: string | null
+	cancelled_at: string | null
+	created_at: string
+	updated_at: string
+}
+
+/**
+ * `reviews` row — 20260416000009_social.sql + reviews_not_self_ck.
+ */
+export type ReviewRow = {
+	id: string
+	reviewer_id: string
+	reviewed_user_id: string
+	order_id: string
+	listing_id: string
+	rating: number
+	comment: string | null
+	created_at: string
+}
 
 /**
  * `categories` row — hierarchical catalog nodes per platform.
@@ -266,6 +322,20 @@ export type Database = {
 				Update: Partial<ViewedListingHistoryRow>
 				Relationships: []
 			}
+			orders: {
+				Row: OrderRow
+				Insert: Partial<OrderRow> &
+					Pick<OrderRow, 'listing_id' | 'buyer_id' | 'seller_id' | 'amount' | 'status'>
+				Update: Partial<OrderRow>
+				Relationships: []
+			}
+			reviews: {
+				Row: ReviewRow
+				Insert: Partial<ReviewRow> &
+					Pick<ReviewRow, 'reviewer_id' | 'reviewed_user_id' | 'order_id' | 'listing_id' | 'rating'>
+				Update: Partial<ReviewRow>
+				Relationships: []
+			}
 		}
 		Views: Record<never, never>
 		Functions: Record<never, never>
@@ -276,6 +346,7 @@ export type Database = {
 			sale_type: SaleType
 			item_condition: ItemCondition
 			subscription_tier: SubscriptionTier
+			order_status: OrderStatus
 		}
 		CompositeTypes: Record<never, never>
 	}
