@@ -30,13 +30,25 @@ export async function GET(
 			return NextResponse.json({ ok: false, error: 'Invalid query parameters' }, { status: 400 })
 		}
 
-		const { limit, offset } = queryResult.data
-		const { data, error } = await listReviewsForUser(idParse.data, { limit, offset })
+		const { page, limit } = queryResult.data
+		const { data, error, pagination } = await listReviewsForUser(idParse.data, page, limit)
 		if (error) {
 			return NextResponse.json({ ok: false, error: 'Failed to load reviews' }, { status: 500 })
 		}
 
-		return NextResponse.json({ ok: true, data: data ?? [] }, { status: 200 })
+		return NextResponse.json(
+			{
+				ok: true,
+				data: data ?? [],
+				pagination: pagination ?? {
+					total: 0,
+					limit,
+					offset: (page - 1) * limit,
+					hasMore: false,
+				},
+			},
+			{ status: 200 },
+		)
 	} catch (error) {
 		Sentry.captureException(error, { extra: { route: 'GET /api/profiles/[id]/reviews' } })
 		console.error('UNEXPECTED: GET /api/profiles/[id]/reviews', { error: serializeError(error) })

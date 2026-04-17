@@ -14,9 +14,12 @@ export const postReviewSchema = z
 
 export type PostReviewInput = z.infer<typeof postReviewSchema>
 
-export const reviewsListQuerySchema = z.object({
-	limit: z.coerce.number().int().min(1).max(50).default(20),
-	offset: z.coerce.number().int().min(0).max(10_000).default(0),
-})
+/** Query params for GET list endpoints (aligned with favorites / recent-views). */
+export const reviewsListQuerySchema = z
+	.object({
+		page: z.coerce.number().int().min(1).max(10_000).default(1),
+		limit: z.coerce.number().int().min(1).max(50).default(20),
+	})
+	.strict()
 
 export type ReviewsListQuery = z.infer<typeof reviewsListQuerySchema>

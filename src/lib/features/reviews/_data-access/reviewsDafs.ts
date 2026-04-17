@@ -9,6 +9,13 @@ import type { Database, ReviewRow } from '@/lib/supabase/database.types'
 
 type ReviewInsert = Database['public']['Tables']['reviews']['Insert']
 
+/** List reads return data + pagination envelope (see `_CONVENTIONS/architecture/data-access`). */
+export type PaginatedReviews = {
+	data: ReviewRow[] | null
+	pagination: { total: number; limit: number; offset: number; hasMore: boolean }
+	error: unknown
+}
+
 /**
  * Inserts a review row (service-role; orchestrator validates order + participant).
  */
@@ -28,41 +35,81 @@ export async function insertReview(
 }
 
 /**
- * Public listing: reviews received by a user, newest first.
+ * Public listing: reviews received by a user, newest first (paginated).
  */
 export async function listReviewsForReviewedUser(
 	reviewedUserId: string,
-	opts: { limit: number; offset: number },
-): Promise<{ data: ReviewRow[] | null; error: unknown }> {
-	const { data, error } = await getAdmin()
+	page: number,
+	limit: number,
+): Promise<PaginatedReviews> {
+	const offset = (page - 1) * limit
+	const to = offset + limit - 1
+
+	const { data: rows, error, count } = await getAdmin()
 		.from('reviews')
-		.select('*')
+		.select('*', { count: 'exact' })
 		.eq('reviewed_user_id', reviewedUserId)
 		.order('created_at', { ascending: false })
-		.range(opts.offset, opts.offset + opts.limit - 1)
+		.range(offset, to)
 
 	if (error) {
-		logDatabaseError('reviews:listReviewsForReviewedUser', { reviewedUserId }, error)
+		logDatabaseError('reviews:listReviewsForReviewedUser', { reviewedUserId, page, limit }, error)
+		return {
+			data: null,
+			pagination: { total: 0, limit, offset, hasMore: false },
+			error,
+		}
 	}
-	return { data, error }
+
+	const total = count ?? 0
+	return {
+		data: rows ?? [],
+		pagination: {
+			total,
+			limit,
+			offset,
+			hasMore: total > offset + limit,
+		},
+		error: null,
+	}
 }
 
 /**
- * Reviews authored by the given user (newest first).
+ * Reviews authored by the given user (newest first, paginated).
  */
 export async function listReviewsByReviewer(
 	reviewerId: string,
-	opts: { limit: number; offset: number },
-): Promise<{ data: ReviewRow[] | null; error: unknown }> {
-	const { data, error } = await getAdmin()
+	page: number,
+	limit: number,
+): Promise<PaginatedReviews> {
+	const offset = (page - 1) * limit
+	const to = offset + limit - 1
+
+	const { data: rows, error, count } = await getAdmin()
 		.from('reviews')
-		.select('*')
+		.select('*', { count: 'exact' })
 		.eq('reviewer_id', reviewerId)
 		.order('created_at', { ascending: false })
-		.range(opts.offset, opts.offset + opts.limit - 1)
+		.range(offset, to)
 
 	if (error) {
-		logDatabaseError('reviews:listReviewsByReviewer', { reviewerId }, error)
+		logDatabaseError('reviews:listReviewsByReviewer', { reviewerId, page, limit }, error)
+		return {
+			data: null,
+			pagination: { total: 0, limit, offset, hasMore: false },
+			error,
+		}
 	}
-	return { data, error }
+
+	const total = count ?? 0
+	return {
+		data: rows ?? [],
+		pagination: {
+			total,
+			limit,
+			offset,
+			hasMore: total > offset + limit,
+		},
+		error: null,
+	}
 }
