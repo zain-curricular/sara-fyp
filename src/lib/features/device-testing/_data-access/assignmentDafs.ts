@@ -2,12 +2,15 @@
 // Device testing — assignment (admin client)
 // ============================================================================
 
+import { ORDER_ROW_SELECT_COLS } from '@/lib/features/orders/_data-access/ordersEscrowDafs'
 import { getAdmin } from '@/lib/supabase/clients/adminClient'
 import { logDatabaseError } from '@/lib/observability/logDatabaseError'
 import { isNotFoundError } from '@/lib/utils/isNotFoundError'
 import type { OrderRow } from '@/lib/supabase/database.types'
 
-import { orderCols } from './orderCols'
+const orderCols = ORDER_ROW_SELECT_COLS
+
+const TESTER_QUEUE_MAX = 200
 
 /** Orders still in the tester workflow (before final approval/shipping outcomes). */
 const testerQueueStatuses = [
@@ -29,6 +32,7 @@ export async function listOrdersForAssignedTester(
 		.eq('assigned_tester_id', testerId)
 		.in('status', [...testerQueueStatuses])
 		.order('updated_at', { ascending: false })
+		.limit(TESTER_QUEUE_MAX)
 
 	if (error) {
 		logDatabaseError('deviceTesting:listOrdersForAssignedTester', { testerId }, error)

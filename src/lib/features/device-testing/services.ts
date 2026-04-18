@@ -12,11 +12,11 @@ export { assignOrderToTester } from './_utils/assignmentService'
 export {
 	addPhotoToReport,
 	createTestReport,
-	listTesterQueue,
 	submitTestReport,
 	updateTestReportDraft,
 } from './_utils/testReportWriteService'
-export { getTestReportByOrderId } from './_data-access/reportsDafs'
+export { listOrdersForAssignedTester } from './_data-access/assignmentDafs'
+export { getTestReportByOrderId } from './orderReads'
 export {
 	createTestReportBodySchema,
 	patchTestReportBodySchema,
@@ -24,3 +24,10 @@ export {
 	assignTesterBodySchema,
 } from './schemas'
 export { validateInspectionResultsAgainstSchema } from './_utils/validateInspectionResults'
+export {
+	addPhotoErrorToHttp,
+	assignTesterErrorToHttp,
+	createTestReportErrorToHttp,
+	patchTestReportErrorToHttp,
+	submitTestReportErrorToHttp,
+} from './_utils/deviceTestingApiHttp'

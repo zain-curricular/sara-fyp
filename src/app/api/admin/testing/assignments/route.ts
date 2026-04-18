@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server'
 import {
 	assignOrderToTester,
 	assignTesterBodySchema,
+	assignTesterErrorToHttp,
 	authenticateAndAuthorizeAdmin,
 } from '@/lib/features/device-testing/services'
 import { isValidationError, validateRequestBody } from '@/lib/utils/validateRequestBody'
@@ -32,14 +33,8 @@ export async function POST(request: Request) {
 		})
 
 		if (error) {
-			const msg = error instanceof Error ? error.message : String(error)
-			if (msg === 'NOT_FOUND') {
-				return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 })
-			}
-			if (msg === 'INVALID_TESTER') {
-				return NextResponse.json({ ok: false, error: 'Invalid tester' }, { status: 400 })
-			}
-			return NextResponse.json({ ok: false, error: 'Failed to assign tester' }, { status: 500 })
+			const { status, body } = assignTesterErrorToHttp(error)
+			return NextResponse.json(body, { status })
 		}
 
 		return NextResponse.json({ ok: true, data }, { status: 200 })

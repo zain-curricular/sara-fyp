@@ -8,6 +8,7 @@ import {
 	authenticateAndAuthorizeTester,
 	createTestReport,
 	createTestReportBodySchema,
+	createTestReportErrorToHttp,
 } from '@/lib/features/device-testing/services'
 import { isValidationError, validateRequestBody } from '@/lib/utils/validateRequestBody'
 import { serializeError } from '@/lib/utils/serializeError'
@@ -32,20 +33,8 @@ export async function POST(request: Request) {
 		})
 
 		if (error) {
-			const msg = error instanceof Error ? error.message : String(error)
-			if (msg === 'NOT_FOUND') {
-				return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 })
-			}
-			if (msg === 'FORBIDDEN') {
-				return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 })
-			}
-			if (msg === 'INVALID_ORDER_STATE') {
-				return NextResponse.json({ ok: false, error: 'Order is not in a testable state' }, { status: 409 })
-			}
-			if (msg === 'DUPLICATE') {
-				return NextResponse.json({ ok: false, error: 'Report already exists for this order' }, { status: 409 })
-			}
-			return NextResponse.json({ ok: false, error: 'Failed to create report' }, { status: 500 })
+			const { status, body } = createTestReportErrorToHttp(error)
+			return NextResponse.json(body, { status })
 		}
 
 		return NextResponse.json({ ok: true, data }, { status: 201 })

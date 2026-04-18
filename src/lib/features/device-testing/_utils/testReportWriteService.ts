@@ -15,7 +15,6 @@ import type { Json } from '@/lib/supabase/database.types'
 import { getAdmin } from '@/lib/supabase/clients/adminClient'
 import { serializeError } from '@/lib/utils/serializeError'
 
-import { listOrdersForAssignedTester } from '../_data-access/assignmentDafs'
 import {
 	getTestReportById,
 	getTestReportByOrderId,
@@ -30,8 +29,13 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 	return typeof v === 'object' && v !== null && !Array.isArray(v)
 }
 
-export async function listTesterQueue(testerId: string) {
-	return listOrdersForAssignedTester(testerId)
+function isPostgresUniqueViolation(error: unknown): boolean {
+	return (
+		typeof error === 'object' &&
+		error !== null &&
+		'code' in error &&
+		(error as { code: string }).code === '23505'
+	)
 }
 
 export async function createTestReport(input: {
@@ -62,8 +66,14 @@ export async function createTestReport(input: {
 		tester_id: input.testerId,
 		inspection_results: {} as Json,
 	})
-	if (iErr || !row) {
-		return { data: null, error: iErr ?? new Error('INSERT_FAILED') }
+	if (iErr) {
+		if (isPostgresUniqueViolation(iErr)) {
+			return { data: null, error: new Error('DUPLICATE') }
+		}
+		return { data: null, error: iErr }
+	}
+	if (!row) {
+		return { data: null, error: new Error('INSERT_FAILED') }
 	}
 	return { data: { id: row.id }, error: null }
 }
@@ -176,20 +186,12 @@ export async function submitTestReport(input: {
 		return { data: null, error: new Error('CATEGORY_NOT_FOUND') }
 	}
 	const schema = category.inspection_schema as Record<string, unknown>
-	if (Object.keys(schema).length > 0) {
-		const v = validateInspectionResultsAgainstSchema(schema, report.inspection_results)
-		if (!v.ok) {
-			return { data: null, error: new Error(`VALIDATION:${v.errors.join('; ')}`) }
-		}
+	if (Object.keys(schema).length === 0) {
+		return { data: null, error: new Error('INSPECTION_SCHEMA_NOT_CONFIGURED') }
 	}
-
-	const { error: uErr } = await updateTestReportById(input.reportId, {
-		overall_score: input.overall_score,
-		overall_notes: input.overall_notes,
-		passed: input.passed,
-	})
-	if (uErr) {
-		return { data: null, error: uErr }
+	const v = validateInspectionResultsAgainstSchema(schema, report.inspection_results)
+	if (!v.ok) {
+		return { data: null, error: new Error(`VALIDATION:${v.errors.join('; ')}`) }
 	}
 
 	const meta = { test_report_id: input.reportId, source: 'device_testing_submit' }
@@ -242,6 +244,25 @@ export async function submitTestReport(input: {
 		return { data: null, error: new Error('TRANSITION_FAILED') }
 	}
 
+	const { error: uErr } = await updateTestReportById(input.reportId, {
+		overall_score: input.overall_score,
+		overall_notes: input.overall_notes,
+		passed: input.passed,
+	})
+	if (uErr) {
+		console.error('device_testing: persist verdict after transitions failed', serializeError(uErr))
+		Sentry.captureMessage('device_testing: report verdict persist failed after successful transitions', {
+			level: 'fatal',
+			tags: { reconciliation_required: 'true' },
+			extra: {
+				orderId: report.order_id,
+				reportId: input.reportId,
+				error: serializeError(uErr),
+			},
+		})
+		return { data: null, error: new Error('REPORT_PERSIST_FAILED') }
+	}
+
 	return { data: { order_id: report.order_id }, error: null }
 }
 
@@ -280,7 +301,9 @@ export async function addPhotoToReport(input: {
 	const orderId = report.order_id
 	const path = `${orderId}/${crypto.randomUUID()}.${ext}`
 
-	const { error: upErr } = await getAdmin().storage.from('test-reports').upload(path, input.bytes, {
+	const bucket = getAdmin().storage.from('test-reports')
+
+	const { error: upErr } = await bucket.upload(path, input.bytes, {
 		contentType: input.contentType,
 		upsert: false,
 	})
@@ -288,11 +311,10 @@ export async function addPhotoToReport(input: {
 		return { data: null, error: upErr }
 	}
 
-	const { data: signed, error: signErr } = await getAdmin()
-		.storage.from('test-reports')
-		.createSignedUrl(path, 3600)
+	const { data: signed, error: signErr } = await bucket.createSignedUrl(path, 3600)
 
 	if (signErr) {
+		await bucket.remove([path])
 		return { data: null, error: signErr }
 	}
 
@@ -309,6 +331,7 @@ export async function addPhotoToReport(input: {
 		inspection_results: results as unknown as Json,
 	})
 	if (uErr) {
+		await bucket.remove([path])
 		return { data: null, error: uErr }
 	}
 

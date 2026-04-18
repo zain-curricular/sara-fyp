@@ -4,7 +4,10 @@
 
 import { NextResponse } from 'next/server'
 
-import { authenticateAndAuthorizeTester, listTesterQueue } from '@/lib/features/device-testing/services'
+import {
+	authenticateAndAuthorizeTester,
+	listOrdersForAssignedTester,
+} from '@/lib/features/device-testing/services'
 import { serializeError } from '@/lib/utils/serializeError'
 import * as Sentry from '@sentry/nextjs'
 
@@ -15,7 +18,7 @@ export async function GET(request: Request) {
 			return auth.error
 		}
 
-		const { data, error } = await listTesterQueue(auth.user.id)
+		const { data, error } = await listOrdersForAssignedTester(auth.user.id)
 		if (error) {
 			return NextResponse.json({ ok: false, error: 'Failed to load queue' }, { status: 500 })
 		}

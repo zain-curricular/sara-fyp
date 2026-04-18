@@ -4,7 +4,11 @@
 
 import { NextResponse } from 'next/server'
 
-import { addPhotoToReport, authenticateAndAuthorizeTester } from '@/lib/features/device-testing/services'
+import {
+	addPhotoErrorToHttp,
+	addPhotoToReport,
+	authenticateAndAuthorizeTester,
+} from '@/lib/features/device-testing/services'
 import { uuidValidation } from '@/lib/validation'
 import { serializeError } from '@/lib/utils/serializeError'
 import * as Sentry from '@sentry/nextjs'
@@ -46,20 +50,8 @@ export async function POST(
 		})
 
 		if (error) {
-			const msg = error instanceof Error ? error.message : String(error)
-			if (msg === 'NOT_FOUND') {
-				return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 })
-			}
-			if (msg === 'FORBIDDEN') {
-				return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 })
-			}
-			if (msg === 'ALREADY_SUBMITTED') {
-				return NextResponse.json({ ok: false, error: 'Report already submitted' }, { status: 409 })
-			}
-			if (msg === 'INVALID_MIME') {
-				return NextResponse.json({ ok: false, error: 'Unsupported image type' }, { status: 400 })
-			}
-			return NextResponse.json({ ok: false, error: 'Upload failed' }, { status: 500 })
+			const { status, body } = addPhotoErrorToHttp(error)
+			return NextResponse.json(body, { status })
 		}
 
 		return NextResponse.json({ ok: true, data }, { status: 200 })
