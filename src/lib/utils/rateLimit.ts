@@ -14,7 +14,8 @@ export type RateLimitResult =
 	| { ok: false; error: NextResponse }
 
 const WINDOW_MS = 60_000
-const MAX_PER_WINDOW = 120
+const MAX_PAYMENT_WEBHOOK_PER_WINDOW = 120
+const MAX_LISTING_PUBLIC_READ_PER_WINDOW = 300
 
 const inMemoryHits = new Map<string, number[]>()
 
@@ -26,21 +27,29 @@ function pruneAndCount(key: string, now: number): number {
 	return next.length
 }
 
-function recordInMemory(key: string, now: number): boolean {
-	const count = pruneAndCount(key, now)
-	if (count >= MAX_PER_WINDOW) {
+function recordInMemory(fullKey: string, now: number, max: number): boolean {
+	const count = pruneAndCount(fullKey, now)
+	if (count >= max) {
 		return false
 	}
-	const next = inMemoryHits.get(key) ?? []
+	const next = inMemoryHits.get(fullKey) ?? []
 	next.push(now)
-	inMemoryHits.set(key, next)
+	inMemoryHits.set(fullKey, next)
 	return true
+}
+
+function tooManyRequests(): RateLimitResult {
+	return {
+		ok: false,
+		error: NextResponse.json({ ok: false, error: 'Too many requests' }, { status: 429 }),
+	}
 }
 
 let redisClient: Redis | null = null
 let paymentWebhookRatelimit: Ratelimit | null = null
+let listingPublicReadRatelimit: Ratelimit | null = null
 
-function getPaymentWebhookRatelimit(): Ratelimit | null {
+function getRedis(): Redis | null {
 	const url = process.env.UPSTASH_REDIS_REST_URL
 	const token = process.env.UPSTASH_REDIS_REST_TOKEN
 	if (!url || !token) {
@@ -49,14 +58,37 @@ function getPaymentWebhookRatelimit(): Ratelimit | null {
 	if (!redisClient) {
 		redisClient = new Redis({ url, token })
 	}
+	return redisClient
+}
+
+function getPaymentWebhookRatelimit(): Ratelimit | null {
+	const redis = getRedis()
+	if (!redis) {
+		return null
+	}
 	if (!paymentWebhookRatelimit) {
 		paymentWebhookRatelimit = new Ratelimit({
-			redis: redisClient,
-			limiter: Ratelimit.slidingWindow(120, '1 m'),
+			redis,
+			limiter: Ratelimit.slidingWindow(MAX_PAYMENT_WEBHOOK_PER_WINDOW, '1 m'),
 			prefix: 'ratelimit:payment-webhook',
 		})
 	}
 	return paymentWebhookRatelimit
+}
+
+function getListingPublicReadRatelimit(): Ratelimit | null {
+	const redis = getRedis()
+	if (!redis) {
+		return null
+	}
+	if (!listingPublicReadRatelimit) {
+		listingPublicReadRatelimit = new Ratelimit({
+			redis,
+			limiter: Ratelimit.slidingWindow(MAX_LISTING_PUBLIC_READ_PER_WINDOW, '1 m'),
+			prefix: 'ratelimit:listing-public',
+		})
+	}
+	return listingPublicReadRatelimit
 }
 
 /**
@@ -67,20 +99,34 @@ export async function checkPaymentWebhookRateLimit(identifier: string): Promise<
 	if (limiter) {
 		const { success } = await limiter.limit(identifier)
 		if (!success) {
-			return {
-				ok: false,
-				error: NextResponse.json({ ok: false, error: 'Too many requests' }, { status: 429 }),
-			}
+			return tooManyRequests()
 		}
 		return { ok: true }
 	}
 
 	const now = Date.now()
-	if (!recordInMemory(`payment-webhook:${identifier}`, now)) {
-		return {
-			ok: false,
-			error: NextResponse.json({ ok: false, error: 'Too many requests' }, { status: 429 }),
+	if (!recordInMemory(`payment-webhook:${identifier}`, now, MAX_PAYMENT_WEBHOOK_PER_WINDOW)) {
+		return tooManyRequests()
+	}
+	return { ok: true }
+}
+
+/**
+ * Unauthenticated listing/auction public reads (bid feed, auction detail).
+ */
+export async function checkListingPublicReadRateLimit(identifier: string): Promise<RateLimitResult> {
+	const limiter = getListingPublicReadRatelimit()
+	if (limiter) {
+		const { success } = await limiter.limit(identifier)
+		if (!success) {
+			return tooManyRequests()
 		}
+		return { ok: true }
+	}
+
+	const now = Date.now()
+	if (!recordInMemory(`listing-public:${identifier}`, now, MAX_LISTING_PUBLIC_READ_PER_WINDOW)) {
+		return tooManyRequests()
 	}
 	return { ok: true }
 }

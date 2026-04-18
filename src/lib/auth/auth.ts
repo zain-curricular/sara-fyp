@@ -89,3 +89,11 @@ export async function getOptionalUserIdFromRequest(request: Request): Promise<st
 
 	return user.id
 }
+
+/**
+ * Returns the raw Bearer JWT (no `Bearer ` prefix) when present.
+ */
+export function getBearerTokenFromRequest(request: Request): string | null {
+	const header = request.headers.get('authorization')
+	return header?.startsWith('Bearer ') ? header.slice(7).trim() : null
+}

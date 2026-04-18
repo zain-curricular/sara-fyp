@@ -7,6 +7,8 @@
 
 import { createClient } from '@supabase/supabase-js'
 
+import type { Database } from '@/lib/supabase/database.types'
+
 function requireEnv(name: string): string {
 	const v = process.env[name]
 	if (!v) {
@@ -24,7 +26,7 @@ function requireEnv(name: string): string {
 export function createUserSupabaseClient(accessToken: string) {
 	const url = requireEnv('NEXT_PUBLIC_SUPABASE_URL')
 	const key = requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY')
-	return createClient(url, key, {
+	return createClient<Database>(url, key, {
 		global: {
 			headers: { Authorization: `Bearer ${accessToken}` },
 		},

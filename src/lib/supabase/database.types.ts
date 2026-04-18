@@ -61,6 +61,8 @@ export type ItemCondition = 'new' | 'like_new' | 'excellent' | 'good' | 'fair' |
 
 export type SubscriptionTier = 'free' | 'premium' | 'wholesale'
 
+export type BidStatus = 'active' | 'outbid' | 'won' | 'lost' | 'cancelled'
+
 export type PaymentMethod = 'jazzcash' | 'easypaisa' | 'stripe' | 'bank_transfer'
 
 export type EscrowTxType = 'hold' | 'release' | 'refund'
@@ -277,6 +279,47 @@ export type SubscriptionRow = {
 }
 
 /**
+ * `auction_config` row — 20260416000005_auctions.sql.
+ */
+export type AuctionConfigRow = {
+	id: string
+	listing_id: string
+	starting_price: number
+	min_increment: number
+	auction_start_at: string
+	auction_end_at: string
+	anti_snipe_minutes: number
+	created_at: string
+	updated_at: string
+}
+
+/**
+ * `bids` row — created via `place_bid` RPC only.
+ */
+export type BidRow = {
+	id: string
+	listing_id: string
+	bidder_id: string
+	amount: number
+	status: BidStatus
+	is_auto_bid: boolean
+	created_at: string
+}
+
+/**
+ * `auto_bids` row — proxy bidding ceiling per user per listing.
+ */
+export type AutoBidRow = {
+	id: string
+	listing_id: string
+	user_id: string
+	max_amount: number
+	is_active: boolean
+	created_at: string
+	updated_at: string
+}
+
+/**
  * Minimal Database generic for typed Supabase clients.
  *
  * Structure mirrors `supabase gen types` output: `Tables`, `Views`, `Functions`,
@@ -368,6 +411,24 @@ export type Database = {
 				Update: Partial<EscrowTransactionRow>
 				Relationships: []
 			}
+			auction_config: {
+				Row: AuctionConfigRow
+				Insert: Partial<AuctionConfigRow> & Pick<AuctionConfigRow, 'listing_id' | 'starting_price' | 'auction_end_at'>
+				Update: Partial<AuctionConfigRow>
+				Relationships: []
+			}
+			bids: {
+				Row: BidRow
+				Insert: Partial<BidRow> & Pick<BidRow, 'listing_id' | 'bidder_id' | 'amount'>
+				Update: Partial<BidRow>
+				Relationships: []
+			}
+			auto_bids: {
+				Row: AutoBidRow
+				Insert: Partial<AutoBidRow> & Pick<AutoBidRow, 'listing_id' | 'user_id' | 'max_amount'>
+				Update: Partial<AutoBidRow>
+				Relationships: []
+			}
 		}
 		Views: Record<never, never>
 		Functions: {
@@ -384,6 +445,19 @@ export type Database = {
 				}
 				Returns: Json
 			}
+			place_bid: {
+				Args: {
+					p_listing_id: string
+					p_amount: number
+				}
+				Returns: Json
+			}
+			create_buy_now_order: {
+				Args: {
+					p_listing_id: string
+				}
+				Returns: Json
+			}
 		}
 		Enums: {
 			platform_type: PlatformType
@@ -396,6 +470,7 @@ export type Database = {
 			payment_method: PaymentMethod
 			escrow_tx_type: EscrowTxType
 			escrow_tx_status: EscrowTxStatus
+			bid_status: BidStatus
 		}
 		CompositeTypes: Record<never, never>
 	}
