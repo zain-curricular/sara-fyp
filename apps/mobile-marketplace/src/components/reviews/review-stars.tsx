@@ -59,17 +59,16 @@ export function ReviewStars({ value, onChange, readOnly = false, className }: Re
 					{[1, 2, 3, 4, 5].map((n) => {
 						const filled = n <= value;
 						return (
-							<button
+							<span
 								key={n}
-								type="button"
-								tabIndex={-1}
-								className="inline-flex rounded-md p-0.5 text-amber-500 hover:text-amber-600"
-								aria-label={`${n} star${n > 1 ? "s" : ""}`}
-								aria-pressed={value === n}
+								role="presentation"
+								data-star-index={n}
+								className="inline-flex cursor-pointer rounded-md p-0.5 text-amber-500 hover:text-amber-600"
 								onClick={() => onChange(n)}
+								onKeyDown={(ev) => ev.stopPropagation()}
 							>
-								<Star className={cn("size-5 cursor-pointer", filled && "fill-current")} aria-hidden />
-							</button>
+								<Star className={cn("size-5", filled && "fill-current")} aria-hidden />
+							</span>
 						);
 					})}
 				</div>

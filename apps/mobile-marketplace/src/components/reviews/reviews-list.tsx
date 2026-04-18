@@ -38,7 +38,11 @@ export function ReviewsList({
 					>
 						{loading ? "Loading…" : "Load more"}
 					</Button>
-					{loadMoreError ? <p className="text-sm text-destructive">{loadMoreError}</p> : null}
+					{loadMoreError ? (
+						<p className="text-sm text-destructive" role="status" aria-live="polite">
+							{loadMoreError}
+						</p>
+					) : null}
 				</div>
 			) : null}
 		</div>
