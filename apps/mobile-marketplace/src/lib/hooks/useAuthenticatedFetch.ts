@@ -27,7 +27,7 @@ export function useAuthenticatedFetch() {
 				});
 			} catch (error) {
 				if (error instanceof ApiError && error.status === 401) {
-					router.push("/login");
+					router.push("/sign-in");
 				}
 				throw error;
 			}

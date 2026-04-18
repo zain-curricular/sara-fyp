@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
-import LoginShell from "./shell";
+import SignInShell from "../sign-in/shell";
 
 const meta = {
-	title: "Pages/Auth/Login",
-	component: LoginShell,
-} satisfies Meta<typeof LoginShell>;
+	title: "Pages/Auth/Sign in",
+	component: SignInShell,
+} satisfies Meta<typeof SignInShell>;
 
 export default meta;
 

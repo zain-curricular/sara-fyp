@@ -1,5 +1,6 @@
-import LoginShell from "./shell";
+import { redirect } from "next/navigation";
 
-export default async function LoginPage() {
-	return <LoginShell />;
+/** @deprecated Use `/sign-in` — kept for bookmarks and old links. */
+export default function LoginPage() {
+	redirect("/sign-in");
 }

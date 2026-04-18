@@ -20,7 +20,13 @@ export default function HomeShell() {
 				</p>
 			</div>
 			<div className="flex flex-wrap gap-3">
-				<Link className={cn(buttonVariants())} href="/seller">
+				<Link className={cn(buttonVariants())} href="/sign-in">
+					Sign in
+				</Link>
+				<Link className={cn(buttonVariants({ variant: "outline" }))} href="/sign-up">
+					Sign up
+				</Link>
+				<Link className={cn(buttonVariants({ variant: "outline" }))} href="/seller">
 					Seller dashboard
 				</Link>
 				<Link className={cn(buttonVariants({ variant: "outline" }))} href="/buyer">
