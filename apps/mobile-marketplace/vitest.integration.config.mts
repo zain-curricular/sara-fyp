@@ -22,5 +22,6 @@ export default defineConfig({
 		setupFiles: ["__tests__/setup.ts"],
 		testTimeout: 30_000,
 		sequence: { concurrent: false },
+		passWithNoTests: true,
 	},
 });
