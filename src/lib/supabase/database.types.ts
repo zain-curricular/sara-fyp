@@ -663,6 +663,12 @@ export type Database = {
 				}
 				Returns: null
 			}
+			mark_all_notifications_read: {
+				Args: {
+					p_user_id: string
+				}
+				Returns: number
+			}
 		}
 		Enums: {
 			platform_type: PlatformType

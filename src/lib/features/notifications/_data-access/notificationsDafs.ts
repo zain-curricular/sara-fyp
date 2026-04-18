@@ -4,6 +4,10 @@
 //
 // Security: `getAdmin()` bypasses RLS. Callers must pass the authenticated
 // `userId` from services/routes and never trust client-supplied user ids.
+//
+// Observability: DB failures are logged + captured once here (not in services).
+
+import * as Sentry from '@sentry/nextjs'
 
 import { getAdmin } from '@/lib/supabase/clients/adminClient'
 import { logDatabaseError } from '@/lib/observability/logDatabaseError'
@@ -12,10 +16,17 @@ import type { NotificationRow } from '@/lib/supabase/database.types'
 const notificationCols =
 	'id, user_id, type, title, body, entity_type, entity_id, read_at, created_at' as const
 
+function captureDbFailure(operation: string, context: Record<string, unknown>, error: unknown): void {
+	logDatabaseError(operation, context, error)
+	Sentry.captureException(error instanceof Error ? error : new Error(`${operation} failed`), {
+		extra: { ...context, operation },
+	})
+}
+
 export type PaginatedNotifications = {
 	data: NotificationRow[] | null
 	pagination: { total: number; limit: number; offset: number; hasMore: boolean }
-	error: unknown
+	error: unknown | null
 }
 
 export async function listNotificationsForUser(
@@ -39,7 +50,7 @@ export async function listNotificationsForUser(
 	const { data: rows, error, count } = await q.range(offset, to)
 
 	if (error) {
-		logDatabaseError('notifications:listNotificationsForUser', { userId, limit, offset, unreadFirst }, error)
+		captureDbFailure('notifications:listNotificationsForUser', { userId, limit, offset, unreadFirst }, error)
 		return {
 			data: null,
 			pagination: { total: 0, limit, offset, hasMore: false },
@@ -62,7 +73,7 @@ export async function listNotificationsForUser(
 
 export async function countUnreadNotificationsForUser(
 	userId: string,
-): Promise<{ count: number; error: unknown }> {
+): Promise<{ count: number; error: unknown | null }> {
 	const { error, count } = await getAdmin()
 		.from('notifications')
 		.select('*', { count: 'exact', head: true })
@@ -70,7 +81,7 @@ export async function countUnreadNotificationsForUser(
 		.is('read_at', null)
 
 	if (error) {
-		logDatabaseError('notifications:countUnreadNotificationsForUser', { userId }, error)
+		captureDbFailure('notifications:countUnreadNotificationsForUser', { userId }, error)
 		return { count: 0, error }
 	}
 
@@ -78,53 +89,68 @@ export async function countUnreadNotificationsForUser(
 }
 
 /**
- * Marks one notification read. Caller must ensure `userId` is the authenticated user.
+ * Marks one notification read (idempotent: already-read rows still return `id`).
+ * Caller must ensure `userId` is the authenticated user.
  */
 export async function updateNotificationReadForUser(
 	userId: string,
 	notificationId: string,
-): Promise<{ data: { id: string } | null; error: unknown }> {
+): Promise<{ data: { id: string } | null; error: unknown | null }> {
 	const readAt = new Date().toISOString()
-	const { data, error } = await getAdmin()
+
+	const { data: updated, error: upErr } = await getAdmin()
 		.from('notifications')
 		.update({ read_at: readAt })
 		.eq('id', notificationId)
 		.eq('user_id', userId)
+		.is('read_at', null)
 		.select('id')
 		.maybeSingle()
 
-	if (error) {
-		logDatabaseError(
-			'notifications:updateNotificationReadForUser',
-			{ userId, notificationId },
-			error,
-		)
-		return { data: null, error }
+	if (upErr) {
+		captureDbFailure('notifications:updateNotificationReadForUser', { userId, notificationId }, upErr)
+		return { data: null, error: upErr }
 	}
 
-	if (!data) {
-		return { data: null, error: null }
+	if (updated) {
+		return { data: { id: updated.id }, error: null }
 	}
 
-	return { data: { id: data.id }, error: null }
+	const { data: row, error: fetchErr } = await getAdmin()
+		.from('notifications')
+		.select('id, read_at')
+		.eq('id', notificationId)
+		.eq('user_id', userId)
+		.maybeSingle()
+
+	if (fetchErr) {
+		captureDbFailure('notifications:updateNotificationReadForUser:fetch', { userId, notificationId }, fetchErr)
+		return { data: null, error: fetchErr }
+	}
+
+	if (row?.read_at != null) {
+		return { data: { id: row.id }, error: null }
+	}
+
+	return { data: null, error: null }
 }
 
 /**
  * Marks all unread notifications for the user. Caller must pass authenticated `userId`.
+ * Uses RPC for an exact affected-row count without returning every id.
  */
-export async function bulkMarkAllReadForUser(userId: string): Promise<{ marked: number; error: unknown }> {
-	const readAt = new Date().toISOString()
-	const { data, error } = await getAdmin()
-		.from('notifications')
-		.update({ read_at: readAt })
-		.eq('user_id', userId)
-		.is('read_at', null)
-		.select('id')
+export async function bulkMarkAllReadForUser(
+	userId: string,
+): Promise<{ marked: number; error: unknown | null }> {
+	const { data, error } = await getAdmin().rpc('mark_all_notifications_read', {
+		p_user_id: userId,
+	})
 
 	if (error) {
-		logDatabaseError('notifications:bulkMarkAllReadForUser', { userId }, error)
+		captureDbFailure('notifications:bulkMarkAllReadForUser', { userId }, error)
 		return { marked: 0, error }
 	}
 
-	return { marked: data?.length ?? 0, error: null }
+	const marked = typeof data === 'number' ? data : 0
+	return { marked, error: null }
 }
