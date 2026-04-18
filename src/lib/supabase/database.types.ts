@@ -9,7 +9,7 @@
 // Scope
 // -----
 // Tables: profiles, product catalog, listings, listing_images, subscriptions,
-// orders, reviews, favorites, viewed_listings (slice).
+// orders, reviews, favorites, viewed_listings, notifications (slice).
 // Functions: subscription escrow RPCs (see 20260418000006_subscription_escrow_atomic.sql).
 
 /** JSON column / RPC payload — mirrors `supabase gen types` `Json`. */
@@ -255,6 +255,33 @@ export type MessageRow = {
 	conversation_id: string
 	sender_id: string
 	content: string
+	read_at: string | null
+	created_at: string
+}
+
+/** `notification_type` enum — 20260416000001_enums.sql */
+export type NotificationType =
+	| 'new_message'
+	| 'outbid'
+	| 'auction_ending'
+	| 'auction_won'
+	| 'auction_sold'
+	| 'order_status'
+	| 'price_drop'
+	| 'warranty_expiring'
+	| 'review_received'
+	| 'listing_approved'
+	| 'listing_flagged'
+
+/** `notifications` row — server-generated inbox events */
+export type NotificationRow = {
+	id: string
+	user_id: string
+	type: NotificationType
+	title: string
+	body: string | null
+	entity_type: string | null
+	entity_id: string | null
 	read_at: string | null
 	created_at: string
 }
@@ -578,6 +605,13 @@ export type Database = {
 				Update: Partial<MessageRow>
 				Relationships: []
 			}
+			notifications: {
+				Row: NotificationRow
+				Insert: Partial<NotificationRow> &
+					Pick<NotificationRow, 'user_id' | 'type' | 'title'>
+				Update: Partial<NotificationRow>
+				Relationships: []
+			}
 		}
 		Views: Record<never, never>
 		Functions: {
@@ -645,6 +679,7 @@ export type Database = {
 			warranty_status: WarrantyStatus
 			claim_status: ClaimStatus
 			spare_part_status: SparePartStatus
+			notification_type: NotificationType
 		}
 		CompositeTypes: Record<never, never>
 	}
