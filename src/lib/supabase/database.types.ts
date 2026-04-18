@@ -173,6 +173,68 @@ export type TestReportRow = {
 	updated_at: string
 }
 
+export type WarrantyStatus = 'active' | 'expired' | 'claimed'
+
+export type ClaimStatus =
+	| 'submitted'
+	| 'under_review'
+	| 'approved'
+	| 'rejected'
+	| 'in_repair'
+	| 'resolved'
+
+export type SparePartStatus = 'ordered' | 'received' | 'installed'
+
+export type RepairCenterRow = {
+	id: string
+	name: string
+	address: string
+	city: string
+	phone_number: string | null
+	email: string | null
+	capabilities: Json
+	is_active: boolean
+	created_at: string
+	updated_at: string
+}
+
+export type WarrantyRow = {
+	id: string
+	order_id: string
+	listing_id: string
+	buyer_id: string
+	seller_id: string
+	starts_at: string
+	expires_at: string
+	status: WarrantyStatus
+	created_at: string
+	updated_at: string
+}
+
+export type WarrantyClaimRow = {
+	id: string
+	warranty_id: string
+	claimant_id: string
+	issue_description: string
+	photos: Json
+	status: ClaimStatus
+	assigned_repair_center_id: string | null
+	resolution_notes: string | null
+	created_at: string
+	updated_at: string
+}
+
+export type SparePartsOrderRow = {
+	id: string
+	claim_id: string
+	part_name: string
+	quantity: number
+	cost: number | null
+	status: SparePartStatus
+	created_at: string
+	updated_at: string
+}
+
 /**
  * `brands` row — manufacturers per platform.
  */
@@ -453,6 +515,32 @@ export type Database = {
 				Update: Partial<TestReportRow>
 				Relationships: []
 			}
+			repair_centers: {
+				Row: RepairCenterRow
+				Insert: Partial<RepairCenterRow> & Pick<RepairCenterRow, 'name' | 'address' | 'city'>
+				Update: Partial<RepairCenterRow>
+				Relationships: []
+			}
+			warranties: {
+				Row: WarrantyRow
+				Insert: Partial<WarrantyRow> &
+					Pick<WarrantyRow, 'order_id' | 'listing_id' | 'buyer_id' | 'seller_id' | 'starts_at' | 'expires_at'>
+				Update: Partial<WarrantyRow>
+				Relationships: []
+			}
+			warranty_claims: {
+				Row: WarrantyClaimRow
+				Insert: Partial<WarrantyClaimRow> &
+					Pick<WarrantyClaimRow, 'warranty_id' | 'claimant_id' | 'issue_description'>
+				Update: Partial<WarrantyClaimRow>
+				Relationships: []
+			}
+			spare_parts_orders: {
+				Row: SparePartsOrderRow
+				Insert: Partial<SparePartsOrderRow> & Pick<SparePartsOrderRow, 'claim_id' | 'part_name'>
+				Update: Partial<SparePartsOrderRow>
+				Relationships: []
+			}
 		}
 		Views: Record<never, never>
 		Functions: {
@@ -490,6 +578,14 @@ export type Database = {
 				}
 				Returns: Json
 			}
+			create_warranty_claim_atomic: {
+				Args: {
+					p_warranty_id: string
+					p_claimant_id: string
+					p_issue_description: string
+				}
+				Returns: string
+			}
 		}
 		Enums: {
 			platform_type: PlatformType
@@ -503,6 +599,9 @@ export type Database = {
 			escrow_tx_type: EscrowTxType
 			escrow_tx_status: EscrowTxStatus
 			bid_status: BidStatus
+			warranty_status: WarrantyStatus
+			claim_status: ClaimStatus
+			spare_part_status: SparePartStatus
 		}
 		CompositeTypes: Record<never, never>
 	}
