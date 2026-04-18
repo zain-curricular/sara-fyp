@@ -11,6 +11,10 @@ type ReviewStarsProps = {
 	onChange?: (rating: number) => void;
 	readOnly?: boolean;
 	className?: string;
+	/** Sets `id` on the interactive slider (pair with `<Label htmlFor={id}>`). */
+	id?: string;
+	/** Visible label element `id` for `aria-labelledby` (omit in tests / standalone). */
+	labelId?: string;
 	/** Optional id of a visible hint element (e.g. form help text) for keyboard/pointer instructions. */
 	ariaDescribedBy?: string;
 };
@@ -20,6 +24,8 @@ export function ReviewStars({
 	onChange,
 	readOnly = false,
 	className,
+	id,
+	labelId,
 	ariaDescribedBy,
 }: ReviewStarsProps) {
 	const interactive = Boolean(onChange) && !readOnly;
@@ -50,6 +56,7 @@ export function ReviewStars({
 	if (interactive && onChange) {
 		return (
 			<div
+				id={id}
 				className={cn(
 					"flex flex-col gap-1 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
 					className,
@@ -60,11 +67,12 @@ export function ReviewStars({
 				aria-valuemax={5}
 				aria-valuenow={value}
 				aria-valuetext={value === 0 ? "No rating selected" : `${value} out of 5 stars`}
-				aria-label="Rating"
+				aria-labelledby={labelId}
+				aria-label={labelId ? undefined : "Rating"}
 				aria-describedby={ariaDescribedBy}
 				onKeyDown={onKeyDown}
 			>
-				<div className="flex items-center gap-0.5">
+				<div className="flex items-center gap-0.5" data-testid="review-stars-segments">
 					{[1, 2, 3, 4, 5].map((n) => {
 						const filled = n <= value;
 						return (

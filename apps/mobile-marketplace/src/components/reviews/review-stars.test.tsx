@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 
 import { ReviewStars } from "./review-stars";
 
@@ -24,9 +24,9 @@ describe("ReviewStars", () => {
 		const onChange = vi.fn();
 		render(<ReviewStars value={0} onChange={onChange} />);
 		const slider = screen.getByRole("slider", { name: "Rating" });
-		const row = slider.firstElementChild;
-		expect(row?.children.length).toBe(5);
-		fireEvent.click(row!.children[3]!);
+		const row = within(slider).getByTestId("review-stars-segments");
+		expect(row.children.length).toBe(5);
+		fireEvent.click(row.children[3]!);
 		expect(onChange).toHaveBeenCalledWith(4);
 	});
 
@@ -36,6 +36,19 @@ describe("ReviewStars", () => {
 			"aria-describedby",
 			"review-rating-hint",
 		);
+	});
+
+	it("uses aria-labelledby instead of aria-label when labelId is set", () => {
+		render(
+			<>
+				<span id="rating-lbl">Rating</span>
+				<ReviewStars value={2} onChange={vi.fn()} id="rating-ctrl" labelId="rating-lbl" />
+			</>,
+		);
+		const slider = screen.getByRole("slider", { name: "Rating" });
+		expect(slider).toHaveAttribute("aria-labelledby", "rating-lbl");
+		expect(slider).toHaveAttribute("id", "rating-ctrl");
+		expect(slider).not.toHaveAttribute("aria-label");
 	});
 
 	it("read-only mode has no slider", () => {
