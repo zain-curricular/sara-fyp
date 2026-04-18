@@ -1,0 +1,20 @@
+// ============================================================================
+// AI Engine — root server barrel (re-exports shared; sub-features later)
+// ============================================================================
+
+import 'server-only'
+
+export {
+	generateStructured,
+	generateTextBounded,
+	moderateInput,
+	assertAiRateLimit,
+	trackAiUsage,
+	getAnthropicProvider,
+	getAnthropicLanguageModel,
+	getOpenAIProvider,
+	getOpenAiMiniModel,
+	AiError,
+	aiErrorToHttp,
+	_clearAiInMemoryRateLimitForTests,
+} from './shared/services'
