@@ -235,6 +235,30 @@ export type SparePartsOrderRow = {
 	updated_at: string
 }
 
+/** `conversations` row — 20260416000008_messaging.sql */
+export type ConversationRow = {
+	id: string
+	listing_id: string
+	buyer_id: string
+	seller_id: string
+	last_message_at: string | null
+	last_message_preview: string | null
+	unread_count_buyer: number
+	unread_count_seller: number
+	created_at: string
+	updated_at: string
+}
+
+/** `messages` row — immutable chat lines */
+export type MessageRow = {
+	id: string
+	conversation_id: string
+	sender_id: string
+	content: string
+	read_at: string | null
+	created_at: string
+}
+
 /**
  * `brands` row — manufacturers per platform.
  */
@@ -541,6 +565,19 @@ export type Database = {
 				Update: Partial<SparePartsOrderRow>
 				Relationships: []
 			}
+			conversations: {
+				Row: ConversationRow
+				Insert: Partial<ConversationRow> &
+					Pick<ConversationRow, 'listing_id' | 'buyer_id' | 'seller_id'>
+				Update: Partial<ConversationRow>
+				Relationships: []
+			}
+			messages: {
+				Row: MessageRow
+				Insert: Partial<MessageRow> & Pick<MessageRow, 'conversation_id' | 'sender_id' | 'content'>
+				Update: Partial<MessageRow>
+				Relationships: []
+			}
 		}
 		Views: Record<never, never>
 		Functions: {
@@ -585,6 +622,12 @@ export type Database = {
 					p_issue_description: string
 				}
 				Returns: string
+			}
+			mark_messages_read: {
+				Args: {
+					p_conversation_id: string
+				}
+				Returns: null
 			}
 		}
 		Enums: {
