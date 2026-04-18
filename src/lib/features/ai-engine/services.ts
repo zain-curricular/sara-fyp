@@ -20,3 +20,9 @@ export {
 } from './shared/services'
 
 export { generateListingDescription } from './description-generator/services'
+
+export {
+	generateAiRating,
+	regenerateAiRatingForListing,
+	type AiRatingPayload,
+} from './rating-engine/services'

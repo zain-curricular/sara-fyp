@@ -4,6 +4,7 @@
 
 import * as Sentry from '@sentry/nextjs'
 
+import { generateAiRating } from '@/lib/features/ai-engine/services'
 import { getListingById } from '@/lib/features/listings/core/services'
 import { getOrderById } from '@/lib/features/orders/services'
 import {
@@ -261,6 +262,32 @@ export async function submitTestReport(input: {
 			},
 		})
 		return { data: null, error: new Error('REPORT_PERSIST_FAILED') }
+	}
+
+	if (input.passed) {
+		const reportForAi = {
+			...report,
+			overall_score: input.overall_score,
+			overall_notes: input.overall_notes,
+			passed: input.passed,
+		}
+		const aiRes = await generateAiRating({
+			listing,
+			report: reportForAi,
+			category,
+			userId: listing.user_id,
+		})
+		if (aiRes.error) {
+			console.error('rating_engine: generateAiRating failed after approval', serializeError(aiRes.error))
+			Sentry.captureMessage('rating_engine: generateAiRating failed after approval', {
+				level: 'warning',
+				extra: {
+					orderId: report.order_id,
+					listingId: listing.id,
+					error: serializeError(aiRes.error),
+				},
+			})
+		}
 	}
 
 	return { data: { order_id: report.order_id }, error: null }

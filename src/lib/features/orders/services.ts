@@ -12,6 +12,7 @@ export {
 	getOrderById,
 	insertOrderEscrowTransaction,
 	listEscrowTransactionsForOrder,
+	listOrdersByListingId,
 	listOrdersForUser,
 	updateEscrowTransactionById,
 } from './_data-access/ordersEscrowDafs'

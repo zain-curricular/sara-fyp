@@ -29,6 +29,29 @@ export async function getOrderById(id: string): Promise<{ data: OrderRow | null;
 	return { data, error: isNotFoundError(error) ? null : error }
 }
 
+const LIST_ORDERS_BY_LISTING_MAX = 50
+
+/**
+ * Orders for a listing (newest first). Used to resolve a test report for AI rating regeneration.
+ */
+export async function listOrdersByListingId(
+	listingId: string,
+	limit: number = 25,
+): Promise<{ data: OrderRow[] | null; error: unknown }> {
+	const cap = Math.min(Math.max(limit, 1), LIST_ORDERS_BY_LISTING_MAX)
+	const { data, error } = await getAdmin()
+		.from('orders')
+		.select(orderCols)
+		.eq('listing_id', listingId)
+		.order('created_at', { ascending: false })
+		.limit(cap)
+
+	if (error) {
+		logDatabaseError('ordersEscrow:listOrdersByListingId', { listingId }, error)
+	}
+	return { data, error }
+}
+
 export async function listOrdersForUser(
 	userId: string,
 ): Promise<{ data: OrderRow[] | null; error: unknown }> {
