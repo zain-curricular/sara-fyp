@@ -11,7 +11,7 @@ import * as Sentry from '@sentry/nextjs'
 
 export async function GET(_request: Request) {
 	try {
-		const auth = await authenticateAndAuthorizeAdmin(request)
+		const auth = await authenticateAndAuthorizeAdmin(_request)
 		if (auth.error) {
 			return auth.error
 		}

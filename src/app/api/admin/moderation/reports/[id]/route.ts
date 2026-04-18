@@ -40,8 +40,14 @@ export async function PATCH(
 		if (error instanceof Error && error.message === 'NOT_FOUND') {
 			return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 })
 		}
+		if (error instanceof Error && error.message === 'FORBIDDEN') {
+			return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 })
+		}
+		if (error instanceof Error && error.message === 'INVALID_STATUS') {
+			return NextResponse.json({ ok: false, error: 'Invalid status' }, { status: 400 })
+		}
 		if (error) {
-			return NextResponse.json({ ok: false, error: 'Failed to update report' }, { status: 500 })
+			return NextResponse.json({ ok: false, error: 'Failed to resolve report' }, { status: 500 })
 		}
 
 		return NextResponse.json({ ok: true, data }, { status: 200 })

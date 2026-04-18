@@ -45,6 +45,7 @@ export async function fetchResolvedReportsForAvgResolution(
 		.from('reports')
 		.select('created_at, resolved_at')
 		.not('resolved_at', 'is', null)
+		.in('status', ['resolved', 'dismissed'])
 		.limit(limit)
 
 	if (error) {

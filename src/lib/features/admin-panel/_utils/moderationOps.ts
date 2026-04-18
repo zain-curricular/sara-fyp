@@ -4,16 +4,24 @@
 
 import 'server-only'
 
-import type { ReportRow, ReportStatus } from '@/lib/supabase/database.types'
+import * as Sentry from '@sentry/nextjs'
 
-import { insertAdminAuditLog } from '../_data-access/auditLogDafs'
+import type { ReportRow } from '@/lib/supabase/database.types'
+import { serializeError } from '@/lib/utils/serializeError'
+
 import {
-	getReportById,
 	listReportsForAdmin,
-	updateReportById,
+	rpcAdminResolveReport,
 	type PaginatedReports,
 } from '../_data-access/moderationDafs'
 import type { AdminModerationReportsQuery, AdminResolveReportBody } from '../schemas'
+
+function rpcMessage(error: unknown): string {
+	if (error && typeof error === 'object' && 'message' in error) {
+		return String((error as { message: string }).message)
+	}
+	return ''
+}
 
 export async function listReportQueue(
 	query: AdminModerationReportsQuery,
@@ -30,39 +38,29 @@ export async function resolveReport(
 	reportId: string,
 	body: AdminResolveReportBody,
 ): Promise<{ data: ReportRow | null; error: unknown }> {
-	const { data: existing, error: gErr } = await getReportById(reportId)
-	if (gErr) {
-		return { data: null, error: gErr }
+	const { data, error } = await rpcAdminResolveReport(adminUserId, reportId, body.status)
+
+	if (!error && data) {
+		return { data, error: null }
 	}
-	if (!existing) {
+
+	const msg = rpcMessage(error)
+	if (msg.includes('REPORT_NOT_FOUND')) {
 		return { data: null, error: new Error('NOT_FOUND') }
 	}
-
-	const status = body.status as ReportStatus
-	const resolvedAt = new Date().toISOString()
-
-	const { data: updated, error: uErr } = await updateReportById(reportId, {
-		status,
-		resolved_by: adminUserId,
-		resolved_at: resolvedAt,
-	})
-	if (uErr || !updated) {
-		return { data: null, error: uErr ?? new Error('UPDATE_FAILED') }
+	if (msg.includes('ACTOR_NOT_ADMIN')) {
+		return { data: null, error: new Error('FORBIDDEN') }
+	}
+	if (msg.includes('INVALID_RESOLVE_STATUS')) {
+		return { data: null, error: new Error('INVALID_STATUS') }
 	}
 
-	const { error: aErr } = await insertAdminAuditLog({
-		actorId: adminUserId,
-		action: 'resolve_report',
-		targetType: 'report',
-		targetId: reportId,
-		metadata: {
-			previous_status: existing.status,
-			new_status: status,
-		},
+	console.error('adminPanel:resolveReport rpc failed', {
+		reportId,
+		error: serializeError(error),
 	})
-	if (aErr) {
-		return { data: updated, error: aErr }
-	}
-
-	return { data: updated, error: null }
+	Sentry.captureException(error instanceof Error ? error : new Error('admin_resolve_report_atomic failed'), {
+		extra: { reportId, adminUserId, message: msg },
+	})
+	return { data: null, error: error ?? new Error('RESOLVE_FAILED') }
 }

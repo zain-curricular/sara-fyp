@@ -688,6 +688,14 @@ export type Database = {
 			}
 		}
 		Functions: {
+			admin_resolve_report_atomic: {
+				Args: {
+					p_actor_id: string
+					p_new_status: ReportStatus
+					p_report_id: string
+				}
+				Returns: Json
+			}
 			complete_subscription_escrow: {
 				Args: {
 					p_escrow_id: string

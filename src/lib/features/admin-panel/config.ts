@@ -2,7 +2,10 @@
 // Admin Panel — analytics memo cache (see 86ex9wvc4)
 // ============================================================================
 
-/** In-memory TTL for GET /api/admin/analytics/* (ms). */
+/**
+ * In-memory TTL for GET /api/admin/analytics/* (ms).
+ * Cache is per Node process; multiple instances may return slightly different payloads until TTL elapses.
+ */
 export const ADMIN_ANALYTICS_CACHE_TTL_MS = 60_000
 
 export const ADMIN_ANALYTICS_CACHE_MAX_ENTRIES = 200

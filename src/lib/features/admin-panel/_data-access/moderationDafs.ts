@@ -4,8 +4,7 @@
 
 import { getAdmin } from '@/lib/supabase/clients/adminClient'
 import { logDatabaseError } from '@/lib/observability/logDatabaseError'
-import { isNotFoundError } from '@/lib/utils/isNotFoundError'
-import type { Database, ReportRow, ReportStatus } from '@/lib/supabase/database.types'
+import type { ReportRow, ReportStatus } from '@/lib/supabase/database.types'
 
 export type PaginatedReports = {
 	data: ReportRow[] | null
@@ -49,30 +48,28 @@ export async function listReportsForAdmin(input: {
 	}
 }
 
-export async function getReportById(
-	id: string,
+/**
+ * Single transaction: update report + append audit row (see migration `admin_resolve_report_atomic`).
+ */
+export async function rpcAdminResolveReport(
+	actorId: string,
+	reportId: string,
+	newStatus: Extract<ReportStatus, 'reviewed' | 'resolved' | 'dismissed'>,
 ): Promise<{ data: ReportRow | null; error: unknown }> {
-	const { data, error } = await getAdmin().from('reports').select('*').eq('id', id).maybeSingle()
+	const { data, error } = await getAdmin().rpc('admin_resolve_report_atomic', {
+		p_report_id: reportId,
+		p_new_status: newStatus,
+		p_actor_id: actorId,
+	})
 
-	if (error && !isNotFoundError(error)) {
-		logDatabaseError('adminPanel:getReportById', { id }, error)
+	if (error) {
+		logDatabaseError('adminPanel:rpcAdminResolveReport', { reportId, newStatus }, error)
+		return { data: null, error }
 	}
-	return { data: data as ReportRow | null, error: isNotFoundError(error) ? null : error }
-}
 
-export async function updateReportById(
-	id: string,
-	patch: Pick<Database['public']['Tables']['reports']['Update'], 'status' | 'resolved_by' | 'resolved_at'>,
-): Promise<{ data: ReportRow | null; error: unknown }> {
-	const { data, error } = await getAdmin()
-		.from('reports')
-		.update(patch)
-		.eq('id', id)
-		.select('*')
-		.maybeSingle()
-
-	if (error && !isNotFoundError(error)) {
-		logDatabaseError('adminPanel:updateReportById', { id }, error)
+	if (data === null || data === undefined) {
+		return { data: null, error: new Error('RESOLVE_EMPTY') }
 	}
-	return { data: data as ReportRow | null, error: isNotFoundError(error) ? null : error }
+
+	return { data: data as ReportRow, error: null }
 }

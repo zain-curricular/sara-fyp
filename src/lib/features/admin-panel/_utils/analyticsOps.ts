@@ -10,7 +10,7 @@ import {
 	fetchMvAdminDailyStatsInRange,
 	fetchResolvedReportsForAvgResolution,
 } from '../_data-access/analyticsDafs'
-import type { MvAdminDailyStatsRow, PlatformType } from '@/lib/supabase/database.types'
+import type { MvAdminDailyStatsRow, PlatformType, ReportRow } from '@/lib/supabase/database.types'
 
 import { getAdminAnalyticsCache, setAdminAnalyticsCache } from './analyticsCache'
 import type { AdminAnalyticsWindowQuery } from '../schemas'
@@ -23,6 +23,26 @@ function utcDateStringDaysAgo(days: number): string {
 
 function utcTodayString(): string {
 	return new Date().toISOString().slice(0, 10)
+}
+
+/** Average hours from `created_at` to `resolved_at`; skips invalid or inverted intervals. Exported for unit tests. */
+export function averageResolutionHoursFromSamples(
+	rows: Pick<ReportRow, 'created_at' | 'resolved_at'>[],
+): { avgHours: number | null; sampleSize: number } {
+	let totalMs = 0
+	let n = 0
+	for (const r of rows) {
+		if (!r.resolved_at) continue
+		const c = new Date(r.created_at).getTime()
+		const x = new Date(r.resolved_at).getTime()
+		if (!Number.isFinite(c) || !Number.isFinite(x) || x < c) continue
+		totalMs += x - c
+		n += 1
+	}
+	if (n === 0) {
+		return { avgHours: null, sampleSize: 0 }
+	}
+	return { avgHours: totalMs / n / 3600000, sampleSize: n }
 }
 
 export type AdminOverviewPayload = {
@@ -139,23 +159,14 @@ export async function getAdminModerationKpis(): Promise<{
 		return { data: null, error: rErr }
 	}
 
-	let avgHours: number | null = null
 	const sample = resolvedRows ?? []
-	if (sample.length > 0) {
-		let totalMs = 0
-		for (const r of sample) {
-			const c = new Date(r.created_at).getTime()
-			const x = new Date(r.resolved_at!).getTime()
-			totalMs += x - c
-		}
-		avgHours = totalMs / sample.length / 3600000
-	}
+	const { avgHours, sampleSize } = averageResolutionHoursFromSamples(sample)
 
 	const payload: AdminModerationKpisPayload = {
 		pending_reports: pending,
 		flagged_listings: flagged,
 		avg_resolution_hours: avgHours,
-		sample_size: sample.length,
+		sample_size: sampleSize,
 	}
 	setAdminAnalyticsCache(cacheKey, payload)
 	return { data: payload, error: null }
