@@ -12,11 +12,62 @@ import { getListingById } from '@/lib/features/listings/core/services'
 import type { AuctionConfigRow, Database } from '@/lib/supabase/database.types'
 import type { CreateAuctionConfigBody, PatchAuctionConfigBody } from '@/lib/features/auctions/schemas'
 
+import { bidderRefForPublicFeed } from './bidFeedService'
+
 type AuctionConfigUpdate = Database['public']['Tables']['auction_config']['Update']
 
 export type AuctionDetailPayload = {
 	config: AuctionConfigRow
 	bid_count: number
+}
+
+/** Public GET — no raw bidder UUIDs; opaque ref matches bid feed. */
+export type PublicAuctionListingSlice = {
+	current_bid: number | null
+	current_bidder_ref: string | null
+}
+
+export type PublicAuctionDetailPayload = AuctionDetailPayload & {
+	listing: PublicAuctionListingSlice
+}
+
+export async function getPublicAuctionDetailForListing(
+	listingId: string,
+): Promise<{ data: PublicAuctionDetailPayload | null; error: unknown }> {
+	const { data: listing, error: lErr } = await getListingById(listingId)
+	if (lErr) {
+		return { data: null, error: lErr }
+	}
+	if (!listing || listing.deleted_at || listing.status !== 'active') {
+		return { data: null, error: new Error('NOT_FOUND') }
+	}
+	if (listing.sale_type !== 'auction' && listing.sale_type !== 'both') {
+		return { data: null, error: new Error('NOT_AUCTION_LISTING') }
+	}
+
+	const { data, error } = await getAuctionDetailForListing(listingId)
+	if (error) {
+		return { data: null, error }
+	}
+	if (!data) {
+		return { data: null, error: null }
+	}
+
+	const current_bidder_ref =
+		listing.current_bidder_id !== null
+			? bidderRefForPublicFeed(listingId, listing.current_bidder_id)
+			: null
+
+	return {
+		data: {
+			...data,
+			listing: {
+				current_bid: listing.current_bid,
+				current_bidder_ref,
+			},
+		},
+		error: null,
+	}
 }
 
 export async function getAuctionDetailForListing(

@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server'
 
 import { authenticateFromRequest, getBearerTokenFromRequest } from '@/lib/auth/auth'
 import { placeBidBodySchema } from '@/lib/features/auctions'
-import { getPublicBidFeed, placeBidWithUserJwt } from '@/lib/features/auctions/services'
+import { getPublicBidFeed, placeBidOutcomeToHttpPayload, placeBidThroughApi } from '@/lib/features/auctions/services'
 import { getListingById } from '@/lib/features/listings/core/services'
 import { getClientIpFromRequest } from '@/lib/utils/clientIp'
 import { checkListingPublicReadRateLimit, isRateLimited } from '@/lib/utils/rateLimit'
@@ -82,40 +82,9 @@ export async function POST(
 			return validation.error
 		}
 
-		const { data, error } = await placeBidWithUserJwt(token, idParse.data, validation.data.amount)
-		if (error) {
-			Sentry.captureException(new Error('place_bid RPC failed'), {
-				extra: { listingId: idParse.data, error: serializeError(error) },
-			})
-			return NextResponse.json({ ok: false, error: 'Failed to place bid' }, { status: 500 })
-		}
-		if (!data) {
-			return NextResponse.json({ ok: false, error: 'Bid failed' }, { status: 500 })
-		}
-		if (!data.ok) {
-			if (data.error === 'Bid too low' && data.minimum_bid !== undefined) {
-				return NextResponse.json(
-					{ ok: false, error: 'Bid too low', data: { minimum_bid: data.minimum_bid } },
-					{ status: 400 },
-				)
-			}
-			const clientErr = data.error
-			if (clientErr === 'Listing not found' || clientErr === 'Auction config not found') {
-				return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 })
-			}
-			if (clientErr === 'Cannot bid on your own listing') {
-				return NextResponse.json({ ok: false, error: 'Cannot bid on your own listing' }, { status: 403 })
-			}
-			if (clientErr === 'Auction has ended' || clientErr === 'Auction has not started') {
-				return NextResponse.json({ ok: false, error: clientErr }, { status: 409 })
-			}
-			if (clientErr === 'Listing does not accept bids' || clientErr === 'Listing is not active') {
-				return NextResponse.json({ ok: false, error: clientErr }, { status: 400 })
-			}
-			return NextResponse.json({ ok: false, error: clientErr }, { status: 400 })
-		}
-
-		return NextResponse.json({ ok: true, data }, { status: 200 })
+		const outcome = await placeBidThroughApi(token, idParse.data, validation.data.amount)
+		const { status, body: resBody } = placeBidOutcomeToHttpPayload(outcome)
+		return NextResponse.json(resBody, { status })
 	} catch (error) {
 		Sentry.captureException(error, { extra: { route: 'POST /api/listings/[id]/bids' } })
 		console.error('UNEXPECTED: POST /api/listings/[id]/bids', { error: serializeError(error) })

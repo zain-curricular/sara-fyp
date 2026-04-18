@@ -11,10 +11,9 @@ import {
 } from '@/lib/features/auctions'
 import {
 	createAuctionConfigForSeller,
-	getAuctionDetailForListing,
+	getPublicAuctionDetailForListing,
 	patchAuctionConfigForSeller,
 } from '@/lib/features/auctions/services'
-import { getListingById } from '@/lib/features/listings/core/services'
 import { getClientIpFromRequest } from '@/lib/utils/clientIp'
 import { isValidationError, validateRequestBody } from '@/lib/utils/validateRequestBody'
 import { checkListingPublicReadRateLimit, isRateLimited } from '@/lib/utils/rateLimit'
@@ -38,38 +37,22 @@ export async function GET(
 			return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 })
 		}
 
-		const { data: listing, error: lErr } = await getListingById(idParse.data)
-		if (lErr) {
-			return NextResponse.json({ ok: false, error: 'Failed to load listing' }, { status: 500 })
-		}
-		if (!listing) {
-			return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 })
-		}
-		if (listing.sale_type !== 'auction' && listing.sale_type !== 'both') {
-			return NextResponse.json({ ok: false, error: 'Not an auction listing' }, { status: 400 })
-		}
-
-		const { data, error } = await getAuctionDetailForListing(idParse.data)
+		const { data, error } = await getPublicAuctionDetailForListing(idParse.data)
 		if (error) {
+			const msg = error instanceof Error ? error.message : String(error)
+			if (msg === 'NOT_FOUND') {
+				return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 })
+			}
+			if (msg === 'NOT_AUCTION_LISTING') {
+				return NextResponse.json({ ok: false, error: 'Not an auction listing' }, { status: 400 })
+			}
 			return NextResponse.json({ ok: false, error: 'Failed to load auction' }, { status: 500 })
 		}
 		if (!data) {
 			return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 })
 		}
 
-		return NextResponse.json(
-			{
-				ok: true,
-				data: {
-					...data,
-					listing: {
-						current_bid: listing.current_bid,
-						current_bidder_id: listing.current_bidder_id,
-					},
-				},
-			},
-			{ status: 200 },
-		)
+		return NextResponse.json({ ok: true, data }, { status: 200 })
 	} catch (error) {
 		Sentry.captureException(error, { extra: { route: 'GET /api/listings/[id]/auction' } })
 		console.error('UNEXPECTED: GET /api/listings/[id]/auction', { error: serializeError(error) })

@@ -31,7 +31,7 @@ export async function GET(
 		if (lErr) {
 			return NextResponse.json({ ok: false, error: 'Failed to load listing' }, { status: 500 })
 		}
-		if (!listing) {
+		if (!listing || listing.deleted_at || listing.status !== 'active') {
 			return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 })
 		}
 		if (listing.sale_type !== 'auction' && listing.sale_type !== 'both') {
