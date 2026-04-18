@@ -22,11 +22,20 @@ describe("ReviewStars", () => {
 
 	it("sets rating via click on star segment (pointer only; keyboard stays on slider)", () => {
 		const onChange = vi.fn();
-		const { container } = render(<ReviewStars value={0} onChange={onChange} />);
-		const star4 = container.querySelector('[data-star-index="4"]');
-		expect(star4).toBeTruthy();
-		fireEvent.click(star4!);
+		render(<ReviewStars value={0} onChange={onChange} />);
+		const slider = screen.getByRole("slider", { name: "Rating" });
+		const row = slider.firstElementChild;
+		expect(row?.children.length).toBe(5);
+		fireEvent.click(row!.children[3]!);
 		expect(onChange).toHaveBeenCalledWith(4);
+	});
+
+	it("links optional description for assistive tech", () => {
+		render(<ReviewStars value={1} onChange={vi.fn()} ariaDescribedBy="review-rating-hint" />);
+		expect(screen.getByRole("slider", { name: "Rating" })).toHaveAttribute(
+			"aria-describedby",
+			"review-rating-hint",
+		);
 	});
 
 	it("read-only mode has no slider", () => {

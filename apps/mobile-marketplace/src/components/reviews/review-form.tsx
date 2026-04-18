@@ -50,8 +50,11 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
 		<form className="flex max-w-lg flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
 			<div className="space-y-2">
 				<Label>Rating</Label>
-				<ReviewStars value={rating} onChange={setRating} />
-				<p className="text-xs text-muted-foreground">Required — tap a star from 1 to 5.</p>
+				<ReviewStars value={rating} onChange={setRating} ariaDescribedBy="review-rating-hint" />
+				<p id="review-rating-hint" className="text-xs text-muted-foreground">
+					Required — tap a star or focus this control and use arrow keys (left/right) to choose 1–5. Home and
+					End jump to 1 and 5.
+				</p>
 			</div>
 			<div className="space-y-2">
 				<Label htmlFor="review-comment">Comment (optional)</Label>

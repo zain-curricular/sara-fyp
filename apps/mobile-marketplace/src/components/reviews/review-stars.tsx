@@ -11,9 +11,17 @@ type ReviewStarsProps = {
 	onChange?: (rating: number) => void;
 	readOnly?: boolean;
 	className?: string;
+	/** Optional id of a visible hint element (e.g. form help text) for keyboard/pointer instructions. */
+	ariaDescribedBy?: string;
 };
 
-export function ReviewStars({ value, onChange, readOnly = false, className }: ReviewStarsProps) {
+export function ReviewStars({
+	value,
+	onChange,
+	readOnly = false,
+	className,
+	ariaDescribedBy,
+}: ReviewStarsProps) {
 	const interactive = Boolean(onChange) && !readOnly;
 
 	function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
@@ -53,6 +61,7 @@ export function ReviewStars({ value, onChange, readOnly = false, className }: Re
 				aria-valuenow={value}
 				aria-valuetext={value === 0 ? "No rating selected" : `${value} out of 5 stars`}
 				aria-label="Rating"
+				aria-describedby={ariaDescribedBy}
 				onKeyDown={onKeyDown}
 			>
 				<div className="flex items-center gap-0.5">
@@ -62,10 +71,8 @@ export function ReviewStars({ value, onChange, readOnly = false, className }: Re
 							<span
 								key={n}
 								role="presentation"
-								data-star-index={n}
 								className="inline-flex cursor-pointer rounded-md p-0.5 text-amber-500 hover:text-amber-600"
 								onClick={() => onChange(n)}
-								onKeyDown={(ev) => ev.stopPropagation()}
 							>
 								<Star className={cn("size-5", filled && "fill-current")} aria-hidden />
 							</span>
