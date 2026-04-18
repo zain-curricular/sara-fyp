@@ -76,12 +76,6 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
 					id="review-rating-label"
 					className="w-fit cursor-pointer"
 					onClick={() => ratingSliderRef.current?.focus()}
-					onKeyDown={(e) => {
-						if (e.key === "Enter" || e.key === " ") {
-							e.preventDefault();
-							ratingSliderRef.current?.focus();
-						}
-					}}
 				>
 					Rating
 				</FieldLabel>
