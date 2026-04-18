@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 
 import { ApiError } from "@/lib/api/client";
 import { useAuthenticatedFetch, useSessionApiFetch } from "@/lib/hooks/useAuthenticatedFetch";
@@ -85,11 +84,9 @@ export function useSellerReviews(sellerId: string, initial: SellerReviewsBundle)
 					? res.error
 					: "Could not load more reviews.";
 			setLoadMoreError(msg);
-			toast.error(msg);
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : "Could not load more reviews.";
 			setLoadMoreError(msg);
-			toast.error(msg);
 		} finally {
 			loadingRef.current = false;
 			setLoading(false);

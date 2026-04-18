@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ApiError } from "@/lib/api/client";
 
-import { mapApiErrorToOrderDetailReviewResult } from "@/lib/features/reviews/map-order-detail-api-error";
+import { mapApiErrorToOrderDetailReviewResult } from "@/lib/features/reviews/_utils/map-order-detail-api-error";
 
 describe("mapApiErrorToOrderDetailReviewResult", () => {
 	it("maps 401 to no_session", () => {

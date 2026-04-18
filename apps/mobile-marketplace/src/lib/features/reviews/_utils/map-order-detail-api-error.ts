@@ -1,6 +1,6 @@
 import { ApiError } from "@/lib/api/client";
 
-import type { FetchOrderDetailForReviewResult } from "./types";
+import type { FetchOrderDetailForReviewResult } from "../types";
 
 /**
  * Maps GET /api/orders/[id] HTTP failures to RSC outcomes. Other statuses rethrow.

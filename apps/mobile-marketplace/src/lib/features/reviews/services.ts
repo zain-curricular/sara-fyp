@@ -7,7 +7,7 @@ import { fetchPublicProfile } from "@/lib/features/profiles/fetch-public-profile
 import type { PublicProfile } from "@/lib/features/profiles/types";
 
 import { profileReviewsQuery } from "@/lib/features/reviews/query";
-import { mapApiErrorToOrderDetailReviewResult } from "@/lib/features/reviews/map-order-detail-api-error";
+import { mapApiErrorToOrderDetailReviewResult } from "@/lib/features/reviews/_utils/map-order-detail-api-error";
 import type {
 	FetchOrderDetailForReviewResult,
 	OrderDetailForReview,

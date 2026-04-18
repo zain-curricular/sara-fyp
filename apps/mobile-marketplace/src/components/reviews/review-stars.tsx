@@ -55,18 +55,21 @@ export function ReviewStars({ value, onChange, readOnly = false, className }: Re
 				aria-label="Rating"
 				onKeyDown={onKeyDown}
 			>
-				<div className="flex items-center gap-0.5" aria-hidden="true">
+				<div className="flex items-center gap-0.5">
 					{[1, 2, 3, 4, 5].map((n) => {
 						const filled = n <= value;
 						return (
-							<span
+							<button
 								key={n}
+								type="button"
+								tabIndex={-1}
 								className="inline-flex rounded-md p-0.5 text-amber-500 hover:text-amber-600"
+								aria-label={`${n} star${n > 1 ? "s" : ""}`}
+								aria-pressed={value === n}
 								onClick={() => onChange(n)}
-								onKeyDown={(ev) => ev.stopPropagation()}
 							>
 								<Star className={cn("size-5 cursor-pointer", filled && "fill-current")} aria-hidden />
-							</span>
+							</button>
 						);
 					})}
 				</div>
