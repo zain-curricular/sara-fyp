@@ -11,6 +11,8 @@
 // and the comment field. The rating label uses onClick + ref focus because
 // <label htmlFor> does not associate reliably with div[role="slider"].
 //
+
+
 "use client";
 
 import { useRef, useState } from "react";
@@ -35,6 +37,7 @@ type ReviewFormProps = {
  * Form for submitting a review for a completed order (rating + optional comment).
  *
  * @param props.orderId - Order id to attach the review to.
+ * @returns The review form element tree.
  */
 export function ReviewForm({ orderId }: ReviewFormProps) {
 	const router = useRouter();

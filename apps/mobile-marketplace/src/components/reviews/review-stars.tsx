@@ -9,11 +9,13 @@
 // Accessibility
 // ---------------
 // Interactive mode uses role="slider" with optional aria-labelledby pointing at
-// a visible label id. If that id is missing in the DOM, we fall back to
-// aria-label so the control always has a name. The parent should focus this
-// control when the label is clicked (native <label htmlFor> does not reliably
-// target a div role="slider").
+// a visible label id. Until the label node is verified in the DOM, the control
+// exposes aria-label so the name is never derived from a missing id. The parent
+// should focus this control when the label is clicked (native <label htmlFor>
+// does not reliably target a div role="slider").
 //
+
+
 import {
 	forwardRef,
 	useLayoutEffect,
@@ -25,26 +27,32 @@ import { Star } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * Props for {@link ReviewStars}.
+ *
+ * @property value - Current rating (0–5); 0 means none selected in interactive mode.
+ * @property onChange - Called with 1–5 when the user picks a value (omit for read-only).
+ * @property readOnly - When true, renders static stars (no slider).
+ * @property className - Optional root class names.
+ * @property id - DOM id for the slider root (pair with a visible label + focus ref).
+ * @property labelId - Id of the element that labels the slider (`aria-labelledby` when present in the DOM).
+ * @property ariaDescribedBy - Optional id of hint text (e.g. keyboard instructions).
+ */
 export type ReviewStarsProps = {
 	value: number;
 	onChange?: (rating: number) => void;
 	readOnly?: boolean;
 	className?: string;
-	/** Sets `id` on the interactive slider (pair with a visible label + focus ref). */
 	id?: string;
-	/**
-	 * Element `id` of the visible label (`aria-labelledby`). If the node is absent,
-	 * the component falls back to `aria-label="Rating"` (and warns in development).
-	 */
 	labelId?: string;
-	/** Optional id of a visible hint element (e.g. form help text) for keyboard/pointer instructions. */
 	ariaDescribedBy?: string;
 };
 
 /**
  * Star rating: interactive slider with arrow keys and star clicks, or read-only stars.
  *
- * @param props - Rating value, optional change handler, and a11y ids for label/description.
+ * @param props - See {@link ReviewStarsProps}.
+ * @returns The interactive slider or read-only star row.
  */
 export const ReviewStars = forwardRef<HTMLDivElement, ReviewStarsProps>(
 	function ReviewStars(
@@ -60,24 +68,24 @@ export const ReviewStars = forwardRef<HTMLDivElement, ReviewStarsProps>(
 		ref,
 	) {
 		const interactive = Boolean(onChange) && !readOnly;
-		const [labelMissing, setLabelMissing] = useState(false);
+		// null = unresolved; true = label node in DOM; false = id missing or absent.
+		const [labelResolved, setLabelResolved] = useState<boolean | null>(null);
 
 		useLayoutEffect(() => {
 			if (!labelId) {
-				setLabelMissing(false);
+				setLabelResolved(null);
 				return;
 			}
 			const el = document.getElementById(labelId);
-			const missing = !el;
-			setLabelMissing(missing);
-			if (missing && process.env.NODE_ENV === "development") {
+			setLabelResolved(!!el);
+			if (!el && process.env.NODE_ENV === "development") {
 				console.warn(
 					`[ReviewStars] labelId="${labelId}" has no matching element; using aria-label fallback.`,
 				);
 			}
 		}, [labelId]);
 
-		const useLabelledBy = Boolean(labelId) && !labelMissing;
+		const useLabelledBy = Boolean(labelId) && labelResolved === true;
 
 		function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
 			if (!interactive || !onChange) return;

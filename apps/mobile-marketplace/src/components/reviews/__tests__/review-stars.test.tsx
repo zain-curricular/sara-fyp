@@ -1,3 +1,12 @@
+// ============================================================================
+// review-stars.test
+// ============================================================================
+//
+// Unit tests for ReviewStars: slider semantics, keyboard, pointer, labelling,
+// and read-only mode.
+//
+
+
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
@@ -38,7 +47,7 @@ describe("ReviewStars", () => {
 		);
 	});
 
-	it("uses aria-labelledby instead of aria-label when labelId is set", () => {
+	it("uses aria-labelledby instead of aria-label when labelId is set", async () => {
 		render(
 			<>
 				<span id="rating-lbl">Rating</span>
@@ -46,7 +55,9 @@ describe("ReviewStars", () => {
 			</>,
 		);
 		const slider = screen.getByRole("slider", { name: "Rating" });
-		expect(slider).toHaveAttribute("aria-labelledby", "rating-lbl");
+		await waitFor(() => {
+			expect(slider).toHaveAttribute("aria-labelledby", "rating-lbl");
+		});
 		expect(slider).toHaveAttribute("id", "rating-ctrl");
 		expect(slider).not.toHaveAttribute("aria-label");
 	});
