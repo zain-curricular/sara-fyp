@@ -1,22 +1,45 @@
+// ============================================================================
+// ReviewForm
+// ============================================================================
+//
+// Buyer-facing form to submit a star rating and optional comment after an order.
+// Posts via useSubmitReview and navigates back to /buyer on success.
+//
+// Layout
+// ------
+// Uses Field primitives for the rating row (custom slider + FieldDescription)
+// and the comment field. The rating label uses onClick + ref focus because
+// <label htmlFor> does not associate reliably with div[role="slider"].
+//
 "use client";
 
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { toast } from "sonner";
 
 import { postReviewSchema, useSubmitReview } from "@/lib/features/reviews";
 import { ReviewStars } from "@/components/reviews/review-stars";
 import { Button } from "@/components/primitives/button";
-import { Label } from "@/components/primitives/label";
+import {
+	Field,
+	FieldDescription,
+	FieldLabel,
+} from "@/components/primitives/field";
 import { Textarea } from "@/components/primitives/textarea";
 
 type ReviewFormProps = {
 	orderId: string;
 };
 
+/**
+ * Form for submitting a review for a completed order (rating + optional comment).
+ *
+ * @param props.orderId - Order id to attach the review to.
+ */
 export function ReviewForm({ orderId }: ReviewFormProps) {
 	const router = useRouter();
 	const submitReview = useSubmitReview();
+	const ratingSliderRef = useRef<HTMLDivElement>(null);
 	const [rating, setRating] = useState(0);
 	const [comment, setComment] = useState("");
 	const [isPending, setIsPending] = useState(false);
@@ -48,24 +71,35 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
 
 	return (
 		<form className="flex max-w-lg flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
-			<div className="space-y-2">
-				<Label id="review-rating-label" htmlFor="review-rating-control">
+			<Field className="space-y-2">
+				<FieldLabel
+					id="review-rating-label"
+					className="w-fit cursor-pointer"
+					onClick={() => ratingSliderRef.current?.focus()}
+					onKeyDown={(e) => {
+						if (e.key === "Enter" || e.key === " ") {
+							e.preventDefault();
+							ratingSliderRef.current?.focus();
+						}
+					}}
+				>
 					Rating
-				</Label>
+				</FieldLabel>
 				<ReviewStars
+					ref={ratingSliderRef}
 					id="review-rating-control"
 					labelId="review-rating-label"
 					value={rating}
 					onChange={setRating}
 					ariaDescribedBy="review-rating-hint"
 				/>
-				<p id="review-rating-hint" className="text-xs text-muted-foreground">
+				<FieldDescription id="review-rating-hint" className="text-xs">
 					Required — tap a star or focus this control and use arrow keys (left/right) to choose 1–5. Home and
 					End jump to 1 and 5.
-				</p>
-			</div>
-			<div className="space-y-2">
-				<Label htmlFor="review-comment">Comment (optional)</Label>
+				</FieldDescription>
+			</Field>
+			<Field className="space-y-2">
+				<FieldLabel htmlFor="review-comment">Comment (optional)</FieldLabel>
 				<Textarea
 					id="review-comment"
 					maxLength={1000}
@@ -74,7 +108,7 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
 					onChange={(ev) => setComment(ev.target.value)}
 					rows={5}
 				/>
-			</div>
+			</Field>
 			<Button type="submit" disabled={isPending || rating < 1}>
 				{isPending ? "Submitting…" : "Submit review"}
 			</Button>

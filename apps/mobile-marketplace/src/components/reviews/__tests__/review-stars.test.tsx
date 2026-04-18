@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
-import { ReviewStars } from "./review-stars";
+import { ReviewStars } from "../review-stars";
 
 describe("ReviewStars", () => {
 	it("exposes slider semantics when interactive", () => {
@@ -49,6 +49,15 @@ describe("ReviewStars", () => {
 		expect(slider).toHaveAttribute("aria-labelledby", "rating-lbl");
 		expect(slider).toHaveAttribute("id", "rating-ctrl");
 		expect(slider).not.toHaveAttribute("aria-label");
+	});
+
+	it("falls back to aria-label when labelId has no matching element", async () => {
+		render(<ReviewStars value={2} onChange={vi.fn()} labelId="does-not-exist" />);
+		await waitFor(() => {
+			const slider = screen.getByRole("slider", { name: "Rating" });
+			expect(slider).not.toHaveAttribute("aria-labelledby", "does-not-exist");
+		});
+		expect(screen.getByRole("slider", { name: "Rating" })).toHaveAttribute("aria-label", "Rating");
 	});
 
 	it("read-only mode has no slider", () => {
