@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import { ReviewStars } from "./review-stars";
 
@@ -24,9 +24,9 @@ describe("ReviewStars", () => {
 		const onChange = vi.fn();
 		render(<ReviewStars value={0} onChange={onChange} />);
 		const slider = screen.getByRole("slider", { name: "Rating" });
-		const row = within(slider).getByTestId("review-stars-segments");
-		expect(row.children.length).toBe(5);
-		fireEvent.click(row.children[3]!);
+		const segments = slider.querySelectorAll('span[role="presentation"]');
+		expect(segments.length).toBe(5);
+		fireEvent.click(segments[3]!);
 		expect(onChange).toHaveBeenCalledWith(4);
 	});
 

@@ -13,7 +13,10 @@ type ReviewStarsProps = {
 	className?: string;
 	/** Sets `id` on the interactive slider (pair with `<Label htmlFor={id}>`). */
 	id?: string;
-	/** Visible label element `id` for `aria-labelledby` (omit in tests / standalone). */
+	/**
+	 * Element `id` of the visible label (`aria-labelledby`). Must exist in the document when set,
+	 * or the slider has no accessible name.
+	 */
 	labelId?: string;
 	/** Optional id of a visible hint element (e.g. form help text) for keyboard/pointer instructions. */
 	ariaDescribedBy?: string;
@@ -72,7 +75,7 @@ export function ReviewStars({
 				aria-describedby={ariaDescribedBy}
 				onKeyDown={onKeyDown}
 			>
-				<div className="flex items-center gap-0.5" data-testid="review-stars-segments">
+				<div className="flex items-center gap-0.5">
 					{[1, 2, 3, 4, 5].map((n) => {
 						const filled = n <= value;
 						return (
