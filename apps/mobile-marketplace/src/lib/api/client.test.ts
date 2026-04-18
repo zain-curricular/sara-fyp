@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, apiFetch } from "./client";
+import { ApiError, apiFetch, apiFetchFormData } from "./client";
 
 describe("apiFetch", () => {
 	afterEach(() => {
@@ -45,5 +45,40 @@ describe("apiFetch", () => {
 		);
 
 		await expect(apiFetch("/x")).rejects.toBeInstanceOf(ApiError);
+	});
+});
+
+describe("apiFetchFormData", () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+		delete process.env.NEXT_PUBLIC_API_URL;
+	});
+
+	it("throws when NEXT_PUBLIC_API_URL is unset", async () => {
+		const fd = new FormData();
+		await expect(apiFetchFormData("/x", fd)).rejects.toThrow(/NEXT_PUBLIC_API_URL is not set/);
+	});
+
+	it("POSTs FormData without setting Content-Type (boundary preserved)", async () => {
+		process.env.NEXT_PUBLIC_API_URL = "https://api.example.com";
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			json: async () => ({ ok: true }),
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		const fd = new FormData();
+		fd.append("file", new Blob(["x"], { type: "image/png" }), "a.png");
+
+		await apiFetchFormData<{ ok: boolean }>("/api/upload", fd, {
+			accessToken: "tok",
+		});
+
+		const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+		expect(init.body).toBe(fd);
+		const headers = init.headers as Headers;
+		expect(headers.get("Authorization")).toBe("Bearer tok");
+		expect(headers.get("Content-Type")).toBeNull();
 	});
 });

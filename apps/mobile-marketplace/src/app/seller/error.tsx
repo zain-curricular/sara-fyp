@@ -1,9 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-
-import { buttonVariants } from "@/components/primitives/button";
-import { cn } from "@/lib/utils";
+import { RouteErrorState } from "@/components/layout/route-error-state";
 
 export default function SellerError({
 	error,
@@ -12,21 +9,12 @@ export default function SellerError({
 	error: Error & { digest?: string };
 	reset: () => void;
 }) {
-	useEffect(() => {
-		console.error(error);
-	}, [error]);
-
 	return (
-		<div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-6">
-			<h2 className="text-lg font-semibold">Could not load seller area</h2>
-			<p className="text-sm text-muted-foreground">{error.message}</p>
-			<button
-				className={cn(buttonVariants({ variant: "outline" }))}
-				type="button"
-				onClick={() => reset()}
-			>
-				Try again
-			</button>
-		</div>
+		<RouteErrorState
+			description="We could not load the seller area. Check your connection and try again."
+			error={error}
+			reset={reset}
+			title="Could not load seller area"
+		/>
 	);
 }

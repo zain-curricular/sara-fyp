@@ -1,21 +1,27 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar";
 import { Button } from "@/components/primitives/button";
-import { Skeleton } from "@/components/primitives/skeleton";
-import { profileQueryKeys, useMyProfile } from "@/lib/features/profiles/hooks";
+import { ApiError } from "@/lib/api/client";
+import type { OwnProfile } from "@/lib/features/profiles/types";
 import { uploadProfileAvatar } from "@/lib/features/profiles/upload-avatar";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
-export default function AvatarSettingsShell() {
-	const q = useMyProfile();
-	const queryClient = useQueryClient();
+export default function AvatarSettingsShell({ profile }: { profile: OwnProfile }) {
+	const router = useRouter();
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [busy, setBusy] = useState(false);
+
+	const initials = (profile.display_name ?? profile.handle ?? "?")
+		.split(/\s+/)
+		.map((s) => s[0])
+		.join("")
+		.slice(0, 2)
+		.toUpperCase();
 
 	async function onPickFile(file: File) {
 		setBusy(true);
@@ -26,9 +32,13 @@ export default function AvatarSettingsShell() {
 			} = await supabase.auth.getSession();
 			const token = session?.access_token;
 			await uploadProfileAvatar(token, file);
-			await queryClient.invalidateQueries({ queryKey: profileQueryKeys.me });
+			router.refresh();
 			toast.success("Avatar updated");
 		} catch (e) {
+			if (e instanceof ApiError && e.status === 401) {
+				router.push("/login");
+				return;
+			}
 			const msg = e instanceof Error ? e.message : "Upload failed";
 			toast.error(msg);
 		} finally {
@@ -38,35 +48,6 @@ export default function AvatarSettingsShell() {
 			}
 		}
 	}
-
-	if (q.isLoading) {
-		return (
-			<div className="flex max-w-xl flex-col gap-6">
-				<Skeleton className="h-8 w-40" />
-				<Skeleton className="size-32 rounded-full" />
-			</div>
-		);
-	}
-
-	if (q.isError || !q.data) {
-		return (
-			<p className="text-sm text-muted-foreground">
-				{q.isError
-					? q.error instanceof Error
-						? q.error.message
-						: "Could not load profile."
-					: "Sign in to change your avatar."}
-			</p>
-		);
-	}
-
-	const profile = q.data;
-	const initials = (profile.display_name ?? profile.handle ?? "?")
-		.split(/\s+/)
-		.map((s) => s[0])
-		.join("")
-		.slice(0, 2)
-		.toUpperCase();
 
 	return (
 		<div className="space-y-6">

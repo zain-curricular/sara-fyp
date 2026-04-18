@@ -1,20 +1,20 @@
 import { z } from "zod";
 
-/** Empty string from forms → `undefined` so optional fields validate correctly. */
-function emptyToUndefined<T extends z.ZodTypeAny>(schema: T) {
-	return z.preprocess((val) => (val === "" ? undefined : val), z.optional(schema));
+/** `""` from HTML inputs → `undefined` for optional PATCH fields. */
+function emptyOr<T extends z.ZodTypeAny>(inner: T) {
+	return z.union([z.literal(""), inner]).transform((v) => (v === "" ? undefined : v));
 }
 
 /** Validated body for PATCH /api/profiles/me — user-editable fields only. */
 export const updateOwnProfileSchema = z
 	.object({
-		display_name: emptyToUndefined(z.string().min(1).max(80)),
-		avatar_url: emptyToUndefined(z.string().url()),
-		phone_number: emptyToUndefined(z.string().regex(/^\+[1-9]\d{1,14}$/)),
-		city: emptyToUndefined(z.string().max(100)),
-		area: emptyToUndefined(z.string().max(100)),
-		bio: emptyToUndefined(z.string().max(500)),
-		handle: emptyToUndefined(z.string().regex(/^[a-z0-9_]{3,30}$/)),
+		display_name: emptyOr(z.string().min(1).max(80)).optional(),
+		avatar_url: emptyOr(z.string().url()).optional(),
+		phone_number: emptyOr(z.string().regex(/^\+[1-9]\d{1,14}$/)).optional(),
+		city: emptyOr(z.string().max(100)).optional(),
+		area: emptyOr(z.string().max(100)).optional(),
+		bio: emptyOr(z.string().max(500)).optional(),
+		handle: emptyOr(z.string().regex(/^[a-z0-9_]{3,30}$/)).optional(),
 		locale: z.enum(["en", "ur"]).optional(),
 	})
 	.strict();

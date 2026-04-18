@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { type Resolver, Controller, useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 
 import { Button } from "@/components/primitives/button";
 import {
@@ -56,7 +56,7 @@ export function EditProfileForm({ profile }: { profile: OwnProfile }) {
 	const update = useUpdateProfile();
 
 	const form = useForm<UpdateOwnProfileInput>({
-		resolver: zodResolver(updateOwnProfileSchema) as Resolver<UpdateOwnProfileInput>,
+		resolver: zodResolver(updateOwnProfileSchema),
 		defaultValues: toFormDefaults(profile),
 	});
 

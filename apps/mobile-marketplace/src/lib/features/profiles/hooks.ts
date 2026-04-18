@@ -1,6 +1,7 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { apiFetch, ApiError } from "@/lib/api/client";
@@ -53,7 +54,7 @@ export function usePublicProfile(id: string | undefined) {
 /** PATCH /api/profiles/me. */
 export function useUpdateProfile() {
 	const authFetch = useAuthenticatedFetch();
-	const queryClient = useQueryClient();
+	const router = useRouter();
 
 	return useMutation({
 		mutationFn: async (input: UpdateOwnProfileInput) => {
@@ -64,8 +65,8 @@ export function useUpdateProfile() {
 			});
 			return parseEnvelope(body);
 		},
-		onSuccess: (data) => {
-			queryClient.setQueryData(profileQueryKeys.me, data);
+		onSuccess: () => {
+			router.refresh();
 			toast.success("Profile saved");
 		},
 		onError: (error: unknown) => {
