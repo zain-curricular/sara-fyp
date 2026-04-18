@@ -2,6 +2,9 @@
   "name": "marketplace",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -14,7 +17,9 @@
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:reset": "supabase db reset",
-    "supabase:gen-types": "supabase gen types typescript --local > src/lib/supabase/database.types.ts"
+    "supabase:gen-types": "supabase gen types typescript --local > src/lib/supabase/database.types.ts",
+    "dev:mobile": "npm run dev -w mobile-marketplace",
+    "build:mobile": "npm run build -w mobile-marketplace"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",
