@@ -9,7 +9,7 @@ vi.mock('@/lib/auth/auth', () => ({
 }))
 
 import { GET } from './route'
-import { mockUnauthenticated } from '../../../../__tests__/api/mockAuth'
+import { mockUnauthenticated } from '../../../../../__tests__/api/mockAuth'
 
 describe('GET /api/me/reviews-written', () => {
 	it('returns 401 when unauthenticated', async () => {

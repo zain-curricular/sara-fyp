@@ -14,7 +14,10 @@ export {
 	claimHandleForProfile,
 } from './_data-access/profilesDafs'
 
-export { authenticateAndAuthorizeAdminProfile } from './_auth/profilesAuth'
+export {
+	authenticateAndAuthorizeAdminProfile,
+	authenticateAdmin,
+} from './_auth/profilesAuth'
 
 export { getProfile, getPublicProfileByHandle } from './_utils/getProfile'
 export { getOwnProfile } from './_utils/getOwnProfile'

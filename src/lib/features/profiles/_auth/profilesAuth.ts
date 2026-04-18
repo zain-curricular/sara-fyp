@@ -54,3 +54,23 @@ export async function authenticateAndAuthorizeAdminProfile(
 
 	return { targetProfile: target, user: auth.user, error: null }
 }
+
+/** Authenticated caller must have `profiles.role === 'admin'`. */
+export async function authenticateAdmin(
+	request: Request,
+): Promise<{ user: { id: string }; error: null } | { user: null; error: NextResponse }> {
+	const auth = await authenticateFromRequest(request)
+	if (auth.error) {
+		return { user: null, error: auth.error }
+	}
+
+	const { data: caller } = await getProfileById(auth.user.id)
+	if (!caller || caller.role !== 'admin') {
+		return {
+			user: null,
+			error: NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 }),
+		}
+	}
+
+	return { user: auth.user, error: null }
+}

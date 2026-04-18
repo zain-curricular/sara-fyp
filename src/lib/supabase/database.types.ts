@@ -10,6 +10,10 @@
 // -----
 // Tables: profiles, product catalog, listings, listing_images, subscriptions,
 // orders, reviews, favorites, viewed_listings (slice).
+// Functions: subscription escrow RPCs (see 20260418000006_subscription_escrow_atomic.sql).
+
+/** JSON column / RPC payload — mirrors `supabase gen types` `Json`. */
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 /**
  * Full `profiles` row — mirrors public.profiles including refinements migration.
@@ -56,6 +60,27 @@ export type SaleType = 'fixed' | 'auction' | 'both'
 export type ItemCondition = 'new' | 'like_new' | 'excellent' | 'good' | 'fair' | 'poor'
 
 export type SubscriptionTier = 'free' | 'premium' | 'wholesale'
+
+export type PaymentMethod = 'jazzcash' | 'easypaisa' | 'stripe' | 'bank_transfer'
+
+export type EscrowTxType = 'hold' | 'release' | 'refund'
+
+export type EscrowTxStatus = 'pending' | 'completed' | 'failed'
+
+/**
+ * `escrow_transactions` row — orders escrow + nullable order_id for subscription checkout.
+ */
+export type EscrowTransactionRow = {
+	id: string
+	order_id: string | null
+	type: EscrowTxType
+	amount: number
+	payment_method: PaymentMethod
+	external_tx_id: string | null
+	status: EscrowTxStatus
+	metadata: Record<string, unknown>
+	created_at: string
+}
 
 /** `order_status` enum — 20260416000001_enums.sql */
 export type OrderStatus =
@@ -336,9 +361,30 @@ export type Database = {
 				Update: Partial<ReviewRow>
 				Relationships: []
 			}
+			escrow_transactions: {
+				Row: EscrowTransactionRow
+				Insert: Partial<EscrowTransactionRow> &
+					Pick<EscrowTransactionRow, 'type' | 'amount' | 'payment_method'>
+				Update: Partial<EscrowTransactionRow>
+				Relationships: []
+			}
 		}
 		Views: Record<never, never>
-		Functions: Record<never, never>
+		Functions: {
+			complete_subscription_escrow: {
+				Args: {
+					p_escrow_id: string
+					p_external_tx_id: string | null
+				}
+				Returns: Json
+			}
+			fail_subscription_escrow: {
+				Args: {
+					p_escrow_id: string
+				}
+				Returns: Json
+			}
+		}
 		Enums: {
 			platform_type: PlatformType
 			user_role: ProfileRow['role']
@@ -347,6 +393,9 @@ export type Database = {
 			item_condition: ItemCondition
 			subscription_tier: SubscriptionTier
 			order_status: OrderStatus
+			payment_method: PaymentMethod
+			escrow_tx_type: EscrowTxType
+			escrow_tx_status: EscrowTxStatus
 		}
 		CompositeTypes: Record<never, never>
 	}
