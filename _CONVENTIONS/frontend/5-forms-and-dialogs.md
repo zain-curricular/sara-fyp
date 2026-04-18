@@ -65,6 +65,8 @@ Every form field uses the `Field` wrapper:
 - `Label` always has `htmlFor` matching the input `id`
 - `FieldDescription` below the input, `FieldError` below description
 
+In the **mobile marketplace** app, primitives use `FieldLabel` (same as `Label` regarding `htmlFor`) and `FieldError` with an `errors` array from react-hook-form, e.g. `errors={[formState.errors.field_name]}`, which is equivalent to rendering a single `FieldError` with `error.message`.
+
 ## Select Fields
 
 Use `Controller` from react-hook-form to bridge shadcn `Select`:

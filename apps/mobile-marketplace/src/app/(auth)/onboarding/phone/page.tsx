@@ -13,5 +13,5 @@ export default async function OnboardingPhonePage() {
 		redirect("/buyer");
 	}
 
-	return <OnboardingPhoneShell />;
+	return <OnboardingPhoneShell initialPhone={profile.phone_number} />;
 }

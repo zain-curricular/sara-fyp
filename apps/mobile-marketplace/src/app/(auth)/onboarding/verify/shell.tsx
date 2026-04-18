@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 
-import { OtpInput } from "@/components/onboarding/otp-input";
+import { OtpInput } from "../_components/otp-input";
 import { Button } from "@/components/primitives/button";
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from "@/components/primitives/field";
 import { useOtpFlow } from "@/lib/features/onboarding/hooks";

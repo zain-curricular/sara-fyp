@@ -1,6 +1,6 @@
 # Client-Side Auth
 
-**Never use raw `fetch()` for API calls in client components** — always `useAuthenticatedFetch()` from `src/lib/hooks/useAuthenticatedFetch.ts`. It attaches the Bearer token from `AuthContext` and redirects to `/login` on 401.
+**Never use raw `fetch()` for API calls in client components** — always `useAuthenticatedFetch()` from `src/lib/hooks/useAuthenticatedFetch.ts`. It attaches the Bearer token from the Supabase session and redirects to `/sign-in` on 401.
 
 ```typescript
 const authFetch = useAuthenticatedFetch();

@@ -20,13 +20,17 @@ import type { z } from "zod";
 
 type FormValues = z.infer<typeof sendPhoneOtpSchema>;
 
-export default function OnboardingPhoneShell() {
+export default function OnboardingPhoneShell({
+	initialPhone = null,
+}: {
+	initialPhone?: string | null;
+}) {
 	const router = useRouter();
 	const { sendPhoneOtp } = useOtpFlow();
 
 	const form = useForm<FormValues>({
 		resolver: zodResolver(sendPhoneOtpSchema),
-		defaultValues: { phone_number: "" },
+		defaultValues: { phone_number: initialPhone ?? "" },
 	});
 
 	return (

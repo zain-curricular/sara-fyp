@@ -1,4 +1,5 @@
 export { useCompleteOnboarding, useOtpFlow, useSendPhoneOtp, useVerifyPhoneOtp } from "./hooks";
+export { getPostSignInRedirectPath } from "./post-sign-in-redirect";
 export {
 	type CompleteOnboardingInput,
 	completeOnboardingSchema,

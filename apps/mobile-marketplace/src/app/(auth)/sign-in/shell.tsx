@@ -10,9 +10,6 @@ import { z } from "zod";
 import { Button } from "@/components/primitives/button";
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from "@/components/primitives/field";
 import { Input } from "@/components/primitives/input";
-import type { ApiEnvelope } from "@/lib/features/onboarding/types";
-import { useAuthenticatedFetch } from "@/lib/hooks/useAuthenticatedFetch";
-import type { OwnProfile } from "@/lib/features/profiles/types";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 const signInSchema = z.object({
@@ -24,7 +21,6 @@ type SignInForm = z.infer<typeof signInSchema>;
 
 export default function SignInShell() {
 	const router = useRouter();
-	const authFetch = useAuthenticatedFetch();
 
 	const form = useForm<SignInForm>({
 		resolver: zodResolver(signInSchema),
@@ -47,25 +43,8 @@ export default function SignInShell() {
 						return;
 					}
 
-					const body = await authFetch<ApiEnvelope<OwnProfile>>("/api/profiles/me");
-					if (!body.ok || !("data" in body) || !body.data) {
-						toast.error("Could not load your profile");
-						return;
-					}
-
-					const profile = body.data;
-					if (!profile.onboarding_completed_at) {
-						if (!profile.phone_verified) {
-							router.push("/onboarding/phone");
-						} else {
-							router.push("/onboarding/profile");
-						}
-						router.refresh();
-						return;
-					}
-
-					router.push("/buyer");
 					router.refresh();
+					router.push("/continue");
 				})}
 			>
 				<FieldSet>

@@ -41,7 +41,7 @@ import FeatureShell from "./shell";
 export default async function FeaturePage({ searchParams }) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) redirect("/login");
+    if (!user) redirect("/sign-in");
 
     const { data, error } = await getFeatureData(user.id);
     if (error || !data) throw new Error("Failed to load data");

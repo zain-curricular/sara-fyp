@@ -51,8 +51,8 @@ export default function SignUpShell() {
 						return;
 					}
 					if (data.session) {
-						router.push("/onboarding/phone");
 						router.refresh();
+						router.push("/continue");
 						return;
 					}
 					toast.success("Check your email to confirm your account, then sign in.");

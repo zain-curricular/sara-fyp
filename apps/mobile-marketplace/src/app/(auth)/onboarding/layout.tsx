@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 
-import { StepProgress } from "@/components/onboarding/step-progress";
+import { StepProgress } from "./_components/step-progress";
 
 const LABELS = ["Phone", "Verify", "Profile"];
 
