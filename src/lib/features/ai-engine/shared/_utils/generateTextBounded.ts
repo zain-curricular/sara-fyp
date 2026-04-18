@@ -26,9 +26,16 @@ export async function generateTextBounded(input: {
 	model: AiModelKey
 	feature: AiFeatureKey
 	userId: TrustedUserId
+	/** Upper bound for completion tokens (capped by model max). */
+	maxOutputTokens?: number
 }): Promise<AiGenerateSuccess<string>> {
 	await assertAiRateLimit(input.userId, input.feature)
-	const { model, modelId, maxOutputTokens } = resolveLanguageModel(input.model)
+	const resolved = resolveLanguageModel(input.model)
+	const { model, modelId } = resolved
+	const maxOutputTokens = Math.min(
+		resolved.maxOutputTokens,
+		input.maxOutputTokens ?? resolved.maxOutputTokens,
+	)
 
 	let lastErr: unknown
 	for (let attempt = 0; attempt <= AI_MAX_RETRIES; attempt++) {

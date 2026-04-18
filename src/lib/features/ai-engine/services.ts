@@ -18,3 +18,5 @@ export {
 	aiErrorToHttp,
 	_clearAiInMemoryRateLimitForTests,
 } from './shared/services'
+
+export { generateListingDescription } from './description-generator/services'

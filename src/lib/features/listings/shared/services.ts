@@ -10,6 +10,8 @@ export {
 } from './_utils/validateDetailsAgainstSchema'
 
 export {
+	authenticateAndAuthorizeListing,
 	authenticateAndAuthorizeAdminListing,
+	type ListingOwnerAuthResult,
 	type AdminListingAuthResult,
 } from './_auth/listingAuth'

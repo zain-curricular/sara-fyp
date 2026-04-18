@@ -10,11 +10,13 @@ import type { PlatformType } from '@/lib/supabase/database.types'
 export function buildListingDescriptionPrompt(input: {
 	platform: PlatformType
 	title: string
+	categoryName: string
 	specSummary: string
 }): string {
 	if (input.platform === 'automotive') {
 		return `Write a short listing description for a vehicle.
 
+Category: ${input.categoryName}
 Title: ${input.title}
 Known details: ${input.specSummary}
 
@@ -23,6 +25,7 @@ Use 2–4 short paragraphs. Mention safety and inspection context where relevant
 
 	return `Write a short listing description for a mobile device.
 
+Category: ${input.categoryName}
 Title: ${input.title}
 Known details: ${input.specSummary}
 

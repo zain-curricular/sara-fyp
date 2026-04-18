@@ -21,6 +21,9 @@ export const AI_MODERATION_TIMEOUT_MS = 15_000
 /** Retries after the first attempt (total attempts = 1 + AI_MAX_RETRIES). */
 export const AI_MAX_RETRIES = 2
 
+/** Max completion tokens for listing descriptions (~300 words). */
+export const AI_DESCRIPTION_MAX_OUTPUT_TOKENS = 400
+
 export const AI_RATE_LIMITS = {
 	description_generator: { requests: 10, window: '1d' as const },
 	rating_engine: { requests: 5, window: '1d' as const },
