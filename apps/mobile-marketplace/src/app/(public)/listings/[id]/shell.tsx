@@ -3,6 +3,8 @@
 import Link from "next/link";
 
 import type { ListingImageRecord, ListingRecord } from "@/lib/features/listings";
+import { FavoriteButton } from "@/components/favorites/favorite-button";
+import { RecordListingView } from "@/components/favorites/record-listing-view";
 import { ListingDetailGallery } from "@/components/listings/listing-detail-gallery";
 import { ListingSpecsTable } from "@/components/listings/listing-specs-table";
 import { Badge } from "@/components/primitives/badge";
@@ -18,11 +20,15 @@ type ListingDetailShellProps = {
 export default function ListingDetailShell({ listing, images }: ListingDetailShellProps) {
 	return (
 		<div className="flex flex-col gap-8">
+			<RecordListingView listingId={listing.id} />
 			<div className="space-y-2">
-				<div className="flex flex-wrap items-center gap-2">
-					<Badge variant="secondary">{listing.status}</Badge>
-					<Badge variant="secondary">{listing.condition}</Badge>
-					<Badge variant="secondary">{listing.sale_type}</Badge>
+				<div className="flex flex-wrap items-center justify-between gap-3">
+					<div className="flex flex-wrap items-center gap-2">
+						<Badge variant="secondary">{listing.status}</Badge>
+						<Badge variant="secondary">{listing.condition}</Badge>
+						<Badge variant="secondary">{listing.sale_type}</Badge>
+					</div>
+					<FavoriteButton listingId={listing.id} />
 				</div>
 				<h1 className="text-2xl font-semibold tracking-tight">{listing.title}</h1>
 				<p className="text-3xl font-semibold tabular-nums">${listing.price.toLocaleString()}</p>

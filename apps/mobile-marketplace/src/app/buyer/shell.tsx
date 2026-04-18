@@ -10,14 +10,22 @@ export default function BuyerShell() {
 		<div className="space-y-6">
 			<div className="space-y-2">
 				<h1 className="text-2xl font-semibold tracking-tight">Buyer</h1>
-				<p className="text-muted-foreground">Purchases and saved searches will live here.</p>
+				<p className="text-muted-foreground">Saved listings and account shortcuts.</p>
 			</div>
-			<Link
-				className={cn(buttonVariants({ variant: "outline" }), "w-fit")}
-				href="/buyer/settings/profile"
-			>
-				Settings
-			</Link>
+			<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+				<Link className={cn(buttonVariants(), "w-fit")} href="/buyer/favorites">
+					Favorites
+				</Link>
+				<Link className={cn(buttonVariants({ variant: "outline" }), "w-fit")} href="/buyer/viewed">
+					Recently viewed
+				</Link>
+				<Link
+					className={cn(buttonVariants({ variant: "outline" }), "w-fit")}
+					href="/buyer/settings/profile"
+				>
+					Settings
+				</Link>
+			</div>
 		</div>
 	);
 }
