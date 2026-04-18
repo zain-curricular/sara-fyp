@@ -1,6 +1,6 @@
 "use client";
 
-import type { KeyboardEvent } from "react";
+import { useEffect, type KeyboardEvent } from "react";
 
 import { Star } from "lucide-react";
 
@@ -32,6 +32,16 @@ export function ReviewStars({
 	ariaDescribedBy,
 }: ReviewStarsProps) {
 	const interactive = Boolean(onChange) && !readOnly;
+
+	useEffect(() => {
+		if (process.env.NODE_ENV !== "development" || !labelId) return;
+		const el = document.getElementById(labelId);
+		if (!el) {
+			console.warn(
+				`[ReviewStars] labelId="${labelId}" has no matching element; the slider may have no accessible name.`,
+			);
+		}
+	}, [labelId]);
 
 	function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
 		if (!interactive || !onChange) return;
@@ -75,7 +85,10 @@ export function ReviewStars({
 				aria-describedby={ariaDescribedBy}
 				onKeyDown={onKeyDown}
 			>
-				<div className="flex items-center gap-0.5">
+				<div
+					className="flex items-center gap-0.5"
+					data-testid={process.env.NODE_ENV === "test" ? "review-stars-segments" : undefined}
+				>
 					{[1, 2, 3, 4, 5].map((n) => {
 						const filled = n <= value;
 						return (
