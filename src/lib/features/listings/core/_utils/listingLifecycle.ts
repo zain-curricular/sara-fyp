@@ -34,7 +34,8 @@ export class ListingServiceError extends Error {
 			| 'CATEGORY_MISMATCH'
 			| 'INVALID_STATUS'
 			| 'LISTING_LIMIT_REACHED'
-			| 'LOCKED',
+			| 'LOCKED'
+			| 'INTERNAL',
 		message?: string,
 		public readonly fields?: string[],
 	) {

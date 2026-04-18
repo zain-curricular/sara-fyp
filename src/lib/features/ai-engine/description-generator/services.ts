@@ -8,8 +8,9 @@ import { getCategoryById } from '@/lib/features/product-catalog/services'
 import { updateListingById, ListingServiceError } from '@/lib/features/listings/core/services'
 import type { ListingRow } from '@/lib/supabase/database.types'
 
+import { AiError } from '../shared/_errors/aiErrors'
 import { AI_DESCRIPTION_MAX_OUTPUT_TOKENS } from '../shared/config'
-import { generateTextBounded } from '../shared/_utils/generateTextBounded'
+import { generateTextBounded } from '../shared/services'
 import { listingDescriptionSystemPrompt } from './_prompts/listingDescriptionSystem'
 import { buildListingDescriptionPrompt } from './_prompts/listingDescription'
 import { extractListingDetailsForPrompt } from './_utils/extractListingDetailsForPrompt'
@@ -42,7 +43,10 @@ export async function generateListingDescription(input: {
 
 	const { data: category, error: catErr } = await getCategoryById(listing.category_id)
 	if (catErr) {
-		return { data: null, error: catErr }
+		return {
+			data: null,
+			error: new ListingServiceError('INTERNAL', 'Category load failed'),
+		}
 	}
 	if (!category) {
 		return { data: null, error: new ListingServiceError('NOT_FOUND', 'Category not found') }
@@ -70,14 +74,23 @@ export async function generateListingDescription(input: {
 		})
 		text = out.data.trim()
 	} catch (e) {
-		return { data: null, error: e }
+		if (AiError.isAiError(e)) {
+			return { data: null, error: e }
+		}
+		return {
+			data: null,
+			error: new ListingServiceError('INTERNAL', 'AI generation failed'),
+		}
 	}
 
 	const { data: updated, error: upErr } = await updateListingById(listing.id, {
 		ai_description: text,
 	})
 	if (upErr || !updated) {
-		return { data: null, error: upErr ?? new Error('Failed to save description') }
+		return {
+			data: null,
+			error: new ListingServiceError('INTERNAL', 'Listing update failed'),
+		}
 	}
 
 	return { data: { listing: updated, description: text }, error: null }

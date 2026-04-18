@@ -28,7 +28,14 @@ export async function authenticateAndAuthorizeListing(
 		return { listing: null, user: null, error: auth.error }
 	}
 
-	const { data: listing } = await getListingById(listingId)
+	const { data: listing, error: listingErr } = await getListingById(listingId)
+	if (listingErr) {
+		return {
+			listing: null,
+			user: null,
+			error: NextResponse.json({ ok: false, error: 'Internal server error' }, { status: 500 }),
+		}
+	}
 	if (!listing || listing.deleted_at) {
 		return {
 			listing: null,

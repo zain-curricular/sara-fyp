@@ -7,9 +7,13 @@ import * as Sentry from '@sentry/nextjs'
 
 import { authenticateAndAuthorizeListing } from '@/lib/features/listings/shared/services'
 import { ListingServiceError } from '@/lib/features/listings/core/services'
-import { generateListingDescription, aiErrorToHttp } from '@/lib/features/ai-engine/services'
+import { generateListingDescription, aiErrorToHttp, AiError } from '@/lib/features/ai-engine/services'
 import { uuidValidation } from '@/lib/validation'
+import { isValidationError, validateRequestBody } from '@/lib/utils/validateRequestBody'
 import { serializeError } from '@/lib/utils/serializeError'
+import { z } from 'zod'
+
+const postBodySchema = z.object({}).strict()
 
 export async function POST(
 	request: Request,
@@ -20,6 +24,12 @@ export async function POST(
 		const idParse = uuidValidation.safeParse(id)
 		if (!idParse.success) {
 			return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 })
+		}
+
+		const body = await request.json().catch(() => ({}))
+		const bodyParse = validateRequestBody(body, postBodySchema)
+		if (isValidationError(bodyParse)) {
+			return bodyParse.error
 		}
 
 		const auth = await authenticateAndAuthorizeListing(request, idParse.data)
@@ -38,9 +48,12 @@ export async function POST(
 			}
 			return NextResponse.json({ ok: false, error: 'Failed to generate description' }, { status: 500 })
 		}
-		if (error) {
+		if (AiError.isAiError(error)) {
 			const http = aiErrorToHttp(error)
 			return NextResponse.json(http.body, { status: http.status })
+		}
+		if (error) {
+			return NextResponse.json({ ok: false, error: 'Failed to generate description' }, { status: 500 })
 		}
 		if (!data) {
 			return NextResponse.json({ ok: false, error: 'Failed to generate description' }, { status: 500 })
