@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { ApiError } from "@/lib/api/client";
 import { useAuthenticatedFetch, useSessionApiFetch } from "@/lib/hooks/useAuthenticatedFetch";
@@ -59,6 +60,7 @@ export function useSellerReviews(sellerId: string, initial: SellerReviewsBundle)
 	const [items, setItems] = useState<ReviewRecord[]>(initial.items);
 	const [pagination, setPagination] = useState<ListingsPagination>(initial.pagination);
 	const [loading, setLoading] = useState(false);
+	const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
 	const loadingRef = useRef(false);
 
 	const loadMore = useCallback(async () => {
@@ -66,6 +68,7 @@ export function useSellerReviews(sellerId: string, initial: SellerReviewsBundle)
 		const nextPage = profileReviewsNextPage(pagination.offset, pagination.limit);
 		loadingRef.current = true;
 		setLoading(true);
+		setLoadMoreError(null);
 		try {
 			const qs = profileReviewsQuery(nextPage, pagination.limit);
 			const res = await sessionFetch<
@@ -75,7 +78,18 @@ export function useSellerReviews(sellerId: string, initial: SellerReviewsBundle)
 			if (res.ok && "data" in res) {
 				setItems((prev) => [...prev, ...res.data]);
 				setPagination(res.pagination);
+				return;
 			}
+			const msg =
+				typeof res === "object" && res !== null && "error" in res && typeof res.error === "string" && res.error
+					? res.error
+					: "Could not load more reviews.";
+			setLoadMoreError(msg);
+			toast.error(msg);
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : "Could not load more reviews.";
+			setLoadMoreError(msg);
+			toast.error(msg);
 		} finally {
 			loadingRef.current = false;
 			setLoading(false);
@@ -89,7 +103,8 @@ export function useSellerReviews(sellerId: string, initial: SellerReviewsBundle)
 			loading,
 			loadMore,
 			hasMore: pagination.hasMore,
+			loadMoreError,
 		}),
-		[items, pagination, loading, loadMore],
+		[items, pagination, loading, loadMore, loadMoreError],
 	);
 }

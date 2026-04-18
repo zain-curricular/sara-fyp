@@ -7,7 +7,12 @@ import { fetchPublicProfile } from "@/lib/features/profiles/fetch-public-profile
 import type { PublicProfile } from "@/lib/features/profiles/types";
 
 import { profileReviewsQuery } from "@/lib/features/reviews/query";
-import type { OrderDetailForReview, ReviewsListPayload } from "@/lib/features/reviews/types";
+import { mapApiErrorToOrderDetailReviewResult } from "@/lib/features/reviews/map-order-detail-api-error";
+import type {
+	FetchOrderDetailForReviewResult,
+	OrderDetailForReview,
+	ReviewsListPayload,
+} from "@/lib/features/reviews/types";
 
 type OrderDetailResponse =
 	| { ok: true; data: OrderDetailForReview }
@@ -17,22 +22,27 @@ type ProfileReviewsResponse =
 	| { ok: true; data: ReviewsListPayload["items"]; pagination: ReviewsListPayload["pagination"] }
 	| { ok: false; error?: string };
 
-/** Authenticated GET /api/orders/[id] for RSC. Returns `null` if no session or 401. */
-export async function fetchOrderDetailForReview(orderId: string): Promise<OrderDetailForReview | null> {
+/**
+ * Authenticated GET /api/orders/[id] for RSC.
+ * - `no_session` — missing user/session or API 401
+ * - `not_found` / `forbidden` — API 404 / 403 (caller may map both to `notFound()`)
+ * - other failures — throws for `error.tsx`
+ */
+export async function fetchOrderDetailForReview(orderId: string): Promise<FetchOrderDetailForReviewResult> {
 	const supabase = await createServerSupabaseClient();
 	const {
 		data: { user },
 		error: userError,
 	} = await supabase.auth.getUser();
 	if (userError || !user) {
-		return null;
+		return { ok: false, reason: "no_session" };
 	}
 
 	const {
 		data: { session },
 	} = await supabase.auth.getSession();
 	if (!session?.access_token) {
-		return null;
+		return { ok: false, reason: "no_session" };
 	}
 
 	try {
@@ -40,12 +50,13 @@ export async function fetchOrderDetailForReview(orderId: string): Promise<OrderD
 			accessToken: session.access_token,
 		});
 		if (!body.ok || !("data" in body)) {
-			return null;
+			throw new Error("Unexpected order detail response");
 		}
-		return body.data;
+		return { ok: true, data: body.data };
 	} catch (e) {
-		if (e instanceof ApiError && e.status === 401) {
-			return null;
+		if (e instanceof ApiError) {
+			const mapped = mapApiErrorToOrderDetailReviewResult(e);
+			if (mapped !== "rethrow") return mapped;
 		}
 		throw e;
 	}

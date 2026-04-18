@@ -25,10 +25,14 @@ export default async function BuyerOrderReviewPage({ params }: Props) {
 		redirect("/login");
 	}
 
-	const detail = await fetchOrderDetailForReview(id);
-	if (!detail) {
-		redirect("/login");
+	const orderResult = await fetchOrderDetailForReview(id);
+	if (!orderResult.ok) {
+		if (orderResult.reason === "no_session") {
+			redirect("/login");
+		}
+		notFound();
 	}
+	const detail = orderResult.data;
 
 	if (detail.order.buyer_id !== user.id) {
 		notFound();

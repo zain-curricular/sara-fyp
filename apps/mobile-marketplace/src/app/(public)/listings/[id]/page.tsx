@@ -19,7 +19,8 @@ export default async function ListingDetailPage({
 
 	const { data, error } = await getListingDetailPagePayload(id, user?.id ?? null);
 	if (error) {
-		throw new Error("Failed to load listing");
+		if (error instanceof Error) throw error;
+		throw new Error("Failed to load listing", { cause: error });
 	}
 	if (!data) {
 		notFound();

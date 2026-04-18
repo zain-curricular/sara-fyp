@@ -15,7 +15,7 @@ export function ReviewsList({
 	initial,
 	emptyMessage = "No reviews yet.",
 }: ReviewsListProps) {
-	const { items, loadMore, hasMore, loading } = useSellerReviews(sellerId, initial);
+	const { items, loadMore, hasMore, loading, loadMoreError } = useSellerReviews(sellerId, initial);
 
 	if (items.length === 0) {
 		return <p className="text-sm text-muted-foreground">{emptyMessage}</p>;
@@ -27,9 +27,19 @@ export function ReviewsList({
 				<ReviewCard key={review.id} review={review} />
 			))}
 			{hasMore ? (
-				<Button type="button" variant="outline" size="sm" className="w-fit" disabled={loading} onClick={() => void loadMore()}>
-					{loading ? "Loading…" : "Load more"}
-				</Button>
+				<div className="flex flex-col gap-2">
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						className="w-fit"
+						disabled={loading}
+						onClick={() => void loadMore()}
+					>
+						{loading ? "Loading…" : "Load more"}
+					</Button>
+					{loadMoreError ? <p className="text-sm text-destructive">{loadMoreError}</p> : null}
+				</div>
 			) : null}
 		</div>
 	);

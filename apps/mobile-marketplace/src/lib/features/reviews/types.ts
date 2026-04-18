@@ -38,6 +38,11 @@ export type OrderDetailForReview = {
 	order: OrderRowSummary;
 };
 
+/** Outcome of {@link fetchOrderDetailForReview} for the buyer review RSC. */
+export type FetchOrderDetailForReviewResult =
+	| { ok: true; data: OrderDetailForReview }
+	| { ok: false; reason: "no_session" | "not_found" | "forbidden" };
+
 export type ReviewsListPayload = {
 	items: ReviewRecord[];
 	pagination: {

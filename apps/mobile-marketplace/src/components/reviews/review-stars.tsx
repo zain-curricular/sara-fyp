@@ -4,7 +4,6 @@ import type { KeyboardEvent } from "react";
 
 import { Star } from "lucide-react";
 
-import { Button } from "@/components/primitives/button";
 import { cn } from "@/lib/utils";
 
 type ReviewStarsProps = {
@@ -40,34 +39,48 @@ export function ReviewStars({ value, onChange, readOnly = false, className }: Re
 		}
 	}
 
+	if (interactive && onChange) {
+		return (
+			<div
+				className={cn(
+					"flex flex-col gap-1 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+					className,
+				)}
+				role="slider"
+				tabIndex={0}
+				aria-valuemin={0}
+				aria-valuemax={5}
+				aria-valuenow={value}
+				aria-valuetext={value === 0 ? "No rating selected" : `${value} out of 5 stars`}
+				aria-label="Rating"
+				onKeyDown={onKeyDown}
+			>
+				<div className="flex items-center gap-0.5" aria-hidden="true">
+					{[1, 2, 3, 4, 5].map((n) => {
+						const filled = n <= value;
+						return (
+							<span
+								key={n}
+								className="inline-flex rounded-md p-0.5 text-amber-500 hover:text-amber-600"
+								onClick={() => onChange(n)}
+								onKeyDown={(ev) => ev.stopPropagation()}
+							>
+								<Star className={cn("size-5 cursor-pointer", filled && "fill-current")} aria-hidden />
+							</span>
+						);
+					})}
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div
-			className={cn("flex items-center gap-0.5", interactive && "outline-none", className)}
-			role={interactive ? "radiogroup" : undefined}
-			aria-label={interactive ? "Rating" : `Rating: ${value} out of 5`}
-			tabIndex={interactive ? 0 : undefined}
-			onKeyDown={onKeyDown}
+			className={cn("flex items-center gap-0.5", className)}
+			aria-label={`Rating: ${value} out of 5`}
 		>
 			{[1, 2, 3, 4, 5].map((n) => {
 				const filled = n <= value;
-				if (interactive && onChange) {
-					return (
-						<Button
-							key={n}
-							type="button"
-							variant="ghost"
-							size="icon-sm"
-							className="text-amber-500 hover:text-amber-600"
-							aria-label={`${n} star${n > 1 ? "s" : ""}`}
-							aria-checked={value === n}
-							role="radio"
-							tabIndex={-1}
-							onClick={() => onChange(n)}
-						>
-							<Star className={cn("size-5", filled && "fill-current")} aria-hidden />
-						</Button>
-					);
-				}
 				return (
 					<Star
 						key={n}
