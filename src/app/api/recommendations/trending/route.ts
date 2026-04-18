@@ -1,16 +1,26 @@
 // ============================================================================
 // GET /api/recommendations/trending — pre-ranked ids from mv_trending_listings
 // ============================================================================
+//
+// `data` may contain fewer than `limit` rows when MV ids point at non-active
+// listings or stale rows (filtered server-side).
 
 import { NextResponse } from 'next/server'
 
 import { trendingQuerySchema } from '@/lib/features/recommendations'
 import { listTrending } from '@/lib/features/recommendations/services'
+import { getClientIpFromRequest } from '@/lib/utils/clientIp'
+import { checkListingPublicReadRateLimit, isRateLimited } from '@/lib/utils/rateLimit'
 import { serializeError } from '@/lib/utils/serializeError'
 import * as Sentry from '@sentry/nextjs'
 
 export async function GET(request: Request) {
 	try {
+		const rate = await checkListingPublicReadRateLimit(getClientIpFromRequest(request))
+		if (isRateLimited(rate)) {
+			return rate.error
+		}
+
 		const { searchParams } = new URL(request.url)
 		const queryResult = trendingQuerySchema.safeParse(Object.fromEntries(searchParams))
 		if (!queryResult.success) {

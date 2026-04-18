@@ -84,9 +84,19 @@ describe('listSimilarForListing', () => {
 			data: listing({ id: L1, status: 'draft' }),
 			error: null,
 		})
-		const { data, error } = await listSimilarForListing(L1, { limit: 10 })
+		const { data, error, listingNotFound } = await listSimilarForListing(L1, { limit: 10 })
 		expect(error).toBeNull()
+		expect(listingNotFound).toBeFalsy()
 		expect(data).toEqual([])
+		expect(dafs.listSimilarListings).not.toHaveBeenCalled()
+	})
+
+	it('sets listingNotFound when no row exists', async () => {
+		vi.mocked(listings.getListingById).mockResolvedValue({ data: null, error: null })
+		const { data, error, listingNotFound } = await listSimilarForListing(L1, { limit: 10 })
+		expect(error).toBeNull()
+		expect(listingNotFound).toBe(true)
+		expect(data).toBeNull()
 		expect(dafs.listSimilarListings).not.toHaveBeenCalled()
 	})
 
@@ -96,8 +106,9 @@ describe('listSimilarForListing', () => {
 			error: null,
 		})
 		vi.mocked(dafs.listSimilarListings).mockResolvedValue({ data: [listing({ id: 'l2' })], error: null })
-		const { data, error } = await listSimilarForListing(L1, { limit: 5 })
+		const { data, error, listingNotFound } = await listSimilarForListing(L1, { limit: 5 })
 		expect(error).toBeNull()
+		expect(listingNotFound).toBeFalsy()
 		expect(data).toHaveLength(1)
 		expect(dafs.listSimilarListings).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -128,6 +139,22 @@ describe('listTrending', () => {
 		vi.mocked(listings.listListingsByIds).mockResolvedValue({ data: [a, b], error: null })
 		const { data } = await listTrending({ platform: 'mobile', limit: 10 })
 		expect(data?.map((x) => x.id)).toEqual([b.id, a.id])
+	})
+
+	it('drops non-active rows so length may be below limit', async () => {
+		const active = listing({ id: 'aaaaaaaa-aaaa-4000-8000-000000000001', status: 'active' })
+		const draft = listing({ id: 'bbbbbbbb-bbbb-4000-8000-000000000002', status: 'draft' })
+		vi.mocked(dafs.listTrendingListingIdsFromMv).mockResolvedValue({
+			data: [
+				{ listing_id: draft.id, platform: 'mobile' as const, trend_score: 2 },
+				{ listing_id: active.id, platform: 'mobile' as const, trend_score: 1 },
+			],
+			error: null,
+		})
+		vi.mocked(listings.listListingsByIds).mockResolvedValue({ data: [active, draft], error: null })
+		const { data } = await listTrending({ platform: 'mobile', limit: 10 })
+		expect(data).toHaveLength(1)
+		expect(data?.[0]?.id).toBe(active.id)
 	})
 })
 
@@ -162,6 +189,16 @@ describe('listForMe', () => {
 		expect(data).toEqual(rows)
 		expect(forMeCache.setForMeCache).toHaveBeenCalled()
 		expect(coldStart.pickColdStartCategoryIds).not.toHaveBeenCalled()
+	})
+
+	it('returns error when view count query fails', async () => {
+		vi.mocked(dafs.countViewedListingsForUser).mockResolvedValue({
+			data: null,
+			error: new Error('db'),
+		})
+		const { data, error } = await listForMe(uid, { platform: 'mobile', limit: 10 })
+		expect(data).toBeNull()
+		expect(error).toBeDefined()
 	})
 
 	it('cold-start then affinity fallback when AI categories empty', async () => {

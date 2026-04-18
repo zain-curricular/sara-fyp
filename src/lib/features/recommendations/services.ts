@@ -27,6 +27,14 @@ import {
 } from './config'
 import type { ForMeQuery, SimilarListingsQuery, TrendingQuery } from './schemas'
 import type { TrustedUserId } from '@/lib/features/ai-engine'
+import { serializeError } from '@/lib/utils/serializeError'
+
+/** Result of {@link listSimilarForListing} — use `listingNotFound` for HTTP 404. */
+export type SimilarListingsServiceResult = {
+	data: ListingRow[] | null
+	error: unknown
+	listingNotFound?: boolean
+}
 
 function reorderListingsByIdOrder(rows: ListingRow[], ids: string[]): ListingRow[] {
 	const idx = new Map(ids.map((id, i) => [id, i]))
@@ -36,25 +44,29 @@ function reorderListingsByIdOrder(rows: ListingRow[], ids: string[]): ListingRow
 export async function listSimilarForListing(
 	listingId: string,
 	query: SimilarListingsQuery,
-): Promise<{ data: ListingRow[] | null; error: unknown }> {
+): Promise<SimilarListingsServiceResult> {
 	const { data: source, error: sErr } = await getListingById(listingId)
 	if (sErr) {
 		return { data: null, error: sErr }
 	}
-	if (!source || source.deleted_at || source.status !== 'active') {
+	if (!source) {
+		return { data: null, error: null, listingNotFound: true }
+	}
+	if (source.deleted_at || source.status !== 'active') {
 		return { data: [], error: null }
 	}
 
 	const priceMin = Math.max(0, Math.floor(source.price * SIMILAR_PRICE_BAND_LOW))
 	const priceMax = Math.ceil(source.price * SIMILAR_PRICE_BAND_HIGH)
 
-	return listSimilarListings({
+	const { data, error } = await listSimilarListings({
 		excludeListingId: source.id,
 		categoryId: source.category_id,
 		priceMin,
 		priceMax,
 		limit: query.limit,
 	})
+	return { data, error }
 }
 
 export async function listTrending(
@@ -90,8 +102,8 @@ export async function listForMe(
 	}
 
 	const { data: viewCount, error: vcErr } = await countViewedListingsForUser(userId)
-	if (vcErr) {
-		return { data: null, error: vcErr }
+	if (vcErr || viewCount === null) {
+		return { data: null, error: vcErr ?? new Error('view_count_unavailable') }
 	}
 
 	if (viewCount >= RECOMMENDATIONS_AFFINITY_MIN_VIEWS) {
@@ -110,6 +122,16 @@ export async function listForMe(
 		platform: query.platform as PlatformType,
 		userId,
 	})
+
+	if (cold.error) {
+		console.warn('recommendations:coldStart fallback to affinity', {
+			userId,
+			platform: query.platform,
+			step: 'pickColdStartCategoryIds',
+			error: serializeError(cold.error),
+			stack: cold.error instanceof Error ? cold.error.stack : undefined,
+		})
+	}
 
 	let listings: ListingRow[] | null = null
 	let err: unknown = cold.error

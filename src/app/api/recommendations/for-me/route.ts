@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server'
 import { authenticateFromRequest } from '@/lib/auth/auth'
 import { forMeQuerySchema } from '@/lib/features/recommendations'
 import { listForMe } from '@/lib/features/recommendations/services'
+import { checkListingPublicReadRateLimit, isRateLimited } from '@/lib/utils/rateLimit'
 import { serializeError } from '@/lib/utils/serializeError'
 import * as Sentry from '@sentry/nextjs'
 
@@ -15,6 +16,11 @@ export async function GET(request: Request) {
 		const auth = await authenticateFromRequest(request)
 		if (auth.error) {
 			return auth.error
+		}
+
+		const rate = await checkListingPublicReadRateLimit(`for-me:${auth.user.id}`)
+		if (isRateLimited(rate)) {
+			return rate.error
 		}
 
 		const { searchParams } = new URL(request.url)

@@ -56,7 +56,7 @@ export async function listTrendingListingIdsFromMv(
 
 export async function countViewedListingsForUser(
 	userId: string,
-): Promise<{ data: number; error: unknown }> {
+): Promise<{ data: number | null; error: unknown }> {
 	const { count, error } = await getAdmin()
 		.from('viewed_listings')
 		.select('id', { count: 'exact', head: true })
@@ -64,7 +64,7 @@ export async function countViewedListingsForUser(
 
 	if (error) {
 		logDatabaseError('recommendations:countViewedListingsForUser', { userId }, error)
-		return { data: 0, error }
+		return { data: null, error }
 	}
 	return { data: count ?? 0, error: null }
 }
