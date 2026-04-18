@@ -15,6 +15,9 @@ export const AI_MODELS = {
 
 export const AI_TIMEOUT_MS = 30_000
 
+/** OpenAI moderation HTTP call — bounded so routes cannot hang indefinitely. */
+export const AI_MODERATION_TIMEOUT_MS = 15_000
+
 /** Retries after the first attempt (total attempts = 1 + AI_MAX_RETRIES). */
 export const AI_MAX_RETRIES = 2
 

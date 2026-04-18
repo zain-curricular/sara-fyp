@@ -6,7 +6,7 @@ import { generateText } from 'ai'
 
 import { AI_MAX_RETRIES, AI_TIMEOUT_MS, type AiFeatureKey } from '../config'
 import { AiError } from '../_errors/aiErrors'
-import type { AiGenerateSuccess, AiModelKey } from '../types'
+import type { AiGenerateSuccess, AiModelKey, TrustedUserId } from '../types'
 import { resolveLanguageModel } from './resolveModel'
 import { assertAiRateLimit } from './rateLimit'
 import { classifyAiError } from './classifyAiError'
@@ -17,13 +17,15 @@ import { withAbortTimeout } from './withTimeout'
 
 /**
  * Free-form text with `maxOutputTokens` from model config. Throws `AiError` after retries exhausted.
+ *
+ * @param input.userId — Must be {@link TrustedUserId} (authenticated caller only).
  */
 export async function generateTextBounded(input: {
 	prompt: string
 	system?: string
 	model: AiModelKey
 	feature: AiFeatureKey
-	userId: string
+	userId: TrustedUserId
 }): Promise<AiGenerateSuccess<string>> {
 	await assertAiRateLimit(input.userId, input.feature)
 	const { model, modelId, maxOutputTokens } = resolveLanguageModel(input.model)
@@ -41,7 +43,7 @@ export async function generateTextBounded(input: {
 					maxRetries: 0,
 				}),
 			)
-			const usage = toAiUsage(result.usage, modelId, input.feature)
+			const usage = toAiUsage(result.totalUsage ?? result.usage, modelId, input.feature)
 			await trackAiUsage(usage)
 			return { data: result.text, usage }
 		} catch (e) {

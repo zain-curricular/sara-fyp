@@ -1,12 +1,16 @@
 // ============================================================================
 // AI Engine — per-user, per-feature limits (Upstash or in-memory fallback)
 // ============================================================================
+//
+// When `UPSTASH_REDIS_*` is unset, limits are enforced in-process only (resets on
+// cold start in serverless — use Upstash in production for consistent quotas).
 
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
 
 import { AI_RATE_LIMITS, type AiFeatureKey } from '../config'
 import { AiError } from '../_errors/aiErrors'
+import type { TrustedUserId } from '../types'
 
 let redisClient: Redis | null = null
 const upstashLimiters = new Map<AiFeatureKey, Ratelimit>()
@@ -72,8 +76,10 @@ function recordInMemory(key: string, window: number, now: number, max: number): 
 
 /**
  * Enforces per-user / per-feature budget. Throws `AiError` `RATE_LIMIT` when exhausted.
+ *
+ * @param userId — Must be {@link TrustedUserId} (authenticated caller only).
  */
-export async function assertAiRateLimit(userId: string, feature: AiFeatureKey): Promise<void> {
+export async function assertAiRateLimit(userId: TrustedUserId, feature: AiFeatureKey): Promise<void> {
 	const cfg = AI_RATE_LIMITS[feature]
 	const identifier = `${userId}:${feature}`
 	const limiter = getUpstashLimiter(feature)

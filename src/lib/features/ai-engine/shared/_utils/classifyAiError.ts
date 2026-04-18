@@ -2,6 +2,8 @@
 // AI Engine — map unknown failures to AiError
 // ============================================================================
 
+import { NoOutputGeneratedError } from 'ai'
+
 import { AiError } from '../_errors/aiErrors'
 
 function isAbortError(e: unknown): boolean {
@@ -17,6 +19,9 @@ function isAbortError(e: unknown): boolean {
 export function classifyAiError(e: unknown): AiError {
 	if (e instanceof AiError) {
 		return e
+	}
+	if (NoOutputGeneratedError.isInstance(e)) {
+		return new AiError('INVALID_OUTPUT', e.message)
 	}
 	if (isAbortError(e)) {
 		return new AiError('TIMEOUT', e instanceof Error ? e.message : 'Aborted')

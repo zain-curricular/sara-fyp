@@ -1,6 +1,9 @@
 // ============================================================================
 // Description Generator — user prompt templates (mobile vs automotive)
 // ============================================================================
+//
+// Callers should only pass `title` / `specSummary` from trusted server data (DB),
+// not raw client fields, to reduce prompt-injection risk when this string is sent to an LLM.
 
 import type { PlatformType } from '@/lib/supabase/database.types'
 
