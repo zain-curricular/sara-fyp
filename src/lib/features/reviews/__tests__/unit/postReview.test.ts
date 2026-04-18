@@ -22,6 +22,7 @@ const completedOrder = (overrides: Partial<OrderRow> = {}): OrderRow => ({
 	listing_id: '20000000-0000-4000-8000-000000000002',
 	buyer_id: 'b0000000-0000-4000-8000-0000000000b1',
 	seller_id: 'c0000000-0000-4000-8000-0000000000c1',
+	assigned_tester_id: null,
 	amount: 10,
 	status: 'completed',
 	shipping_tracking_to_center: null,

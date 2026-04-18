@@ -107,6 +107,7 @@ export type OrderRow = {
 	listing_id: string
 	buyer_id: string
 	seller_id: string
+	assigned_tester_id: string | null
 	amount: number
 	status: OrderStatus
 	shipping_tracking_to_center: string | null
@@ -152,6 +153,22 @@ export type CategoryRow = {
 	position: number
 	is_active: boolean
 	spec_schema: Record<string, unknown>
+	inspection_schema: Record<string, unknown>
+	created_at: string
+	updated_at: string
+}
+
+/**
+ * `test_reports` row — device inspection (one per order).
+ */
+export type TestReportRow = {
+	id: string
+	order_id: string
+	tester_id: string
+	inspection_results: Json
+	overall_score: number | null
+	overall_notes: string | null
+	passed: boolean | null
 	created_at: string
 	updated_at: string
 }
@@ -427,6 +444,13 @@ export type Database = {
 				Row: AutoBidRow
 				Insert: Partial<AutoBidRow> & Pick<AutoBidRow, 'listing_id' | 'user_id' | 'max_amount'>
 				Update: Partial<AutoBidRow>
+				Relationships: []
+			}
+			test_reports: {
+				Row: TestReportRow
+				Insert: Partial<TestReportRow> &
+					Pick<TestReportRow, 'order_id' | 'tester_id' | 'inspection_results'>
+				Update: Partial<TestReportRow>
 				Relationships: []
 			}
 		}

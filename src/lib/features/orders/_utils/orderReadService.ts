@@ -2,6 +2,7 @@
 // Orders — participant-scoped reads (buyer, seller, admin)
 // ============================================================================
 
+import { getTestReportByOrderId } from '@/lib/features/device-testing/_data-access/reportsDafs'
 import { getProfileById } from '@/lib/features/profiles/services'
 import type { EscrowTransactionRow, OrderRow } from '@/lib/supabase/database.types'
 
@@ -20,6 +21,12 @@ export async function listOrdersForCurrentUser(
 export type OrderDetailPayload = {
 	order: OrderRow
 	escrow_transactions: EscrowTransactionRow[]
+	/** Buyer/seller/admin: verdict summary only (no per-criterion inspection payload). */
+	test_report_public?: {
+		passed: boolean
+		overall_score: number | null
+		overall_notes: string | null
+	}
 }
 
 export async function getOrderDetailForParticipant(
@@ -47,10 +54,21 @@ export async function getOrderDetailForParticipant(
 		return { data: null, error: eErr }
 	}
 
+	const { data: tr } = await getTestReportByOrderId(orderId)
+	const test_report_public =
+		tr && tr.passed !== null
+			? {
+					passed: tr.passed,
+					overall_score: tr.overall_score,
+					overall_notes: tr.overall_notes,
+				}
+			: undefined
+
 	return {
 		data: {
 			order,
 			escrow_transactions: escrows ?? [],
+			...(test_report_public ? { test_report_public } : {}),
 		},
 		error: null,
 	}

@@ -40,6 +40,7 @@ describe('listCategoriesPublic', () => {
 				position: 0,
 				is_active: true,
 				spec_schema: {},
+				inspection_schema: {},
 				created_at: new Date().toISOString(),
 				updated_at: new Date().toISOString(),
 			},
@@ -53,6 +54,7 @@ describe('listCategoriesPublic', () => {
 				position: 1,
 				is_active: false,
 				spec_schema: {},
+				inspection_schema: {},
 				created_at: new Date().toISOString(),
 				updated_at: new Date().toISOString(),
 			},
@@ -84,6 +86,7 @@ describe('getCategorySpecSchemaPublic', () => {
 			position: 0,
 			is_active: false,
 			spec_schema: { ram_gb: 'number' },
+			inspection_schema: {},
 			created_at: new Date().toISOString(),
 			updated_at: new Date().toISOString(),
 		}
