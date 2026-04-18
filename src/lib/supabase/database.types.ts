@@ -449,6 +449,13 @@ export type AutoBidRow = {
 	updated_at: string
 }
 
+/** Materialized view `mv_trending_listings` (cron-refreshed). */
+export type MvTrendingListingViewRow = {
+	listing_id: string
+	platform: PlatformType
+	trend_score: number
+}
+
 /**
  * Minimal Database generic for typed Supabase clients.
  *
@@ -613,7 +620,14 @@ export type Database = {
 				Relationships: []
 			}
 		}
-		Views: Record<never, never>
+		Views: {
+			mv_trending_listings: {
+				Row: MvTrendingListingViewRow
+				Insert: never
+				Update: never
+				Relationships: []
+			}
+		}
 		Functions: {
 			complete_subscription_escrow: {
 				Args: {
