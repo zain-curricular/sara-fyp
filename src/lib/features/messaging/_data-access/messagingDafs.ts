@@ -1,6 +1,10 @@
 // ============================================================================
 // Messaging — data access (service-role client; see markMessagesReadWithUserJwt)
 // ============================================================================
+//
+// Security: `getAdmin()` bypasses RLS. Do not call these DAFs from routes
+// directly — always go through `messagingOps` (or future services) so
+// participant / listing rules are enforced.
 
 import { createUserSupabaseClient } from '@/lib/supabase/userClient'
 import { getAdmin } from '@/lib/supabase/clients/adminClient'
@@ -42,6 +46,7 @@ export async function getConversationById(
 
 /**
  * Idempotent open — buyer + listing seller triple; ON CONFLICT refresh updated_at.
+ * Service-role only; caller must verify buyer/listing rules.
  */
 export async function upsertConversationByTriple(input: {
 	listing_id: string
@@ -102,6 +107,7 @@ export async function listConversationsForUser(
 	}
 }
 
+/** Service-role insert; caller must verify sender is a conversation participant. */
 export async function insertMessage(
 	row: Database['public']['Tables']['messages']['Insert'] &
 		Pick<MessageRow, 'conversation_id' | 'sender_id' | 'content'>,

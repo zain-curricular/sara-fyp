@@ -20,10 +20,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 			return auth.error
 		}
 
-		const token = getBearerTokenFromRequest(request)
-		if (!token) {
-			return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
-		}
+		// Same Bearer as auth; needed for SECURITY INVOKER RPC (`auth.uid()`).
+		const token = getBearerTokenFromRequest(request) as string
 
 		const { id } = await context.params
 		const idParse = uuidValidation.safeParse(id)

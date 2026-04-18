@@ -4,8 +4,11 @@
 
 import 'server-only'
 
+import * as Sentry from '@sentry/nextjs'
+
 import { getListingById } from '@/lib/features/listings/core/services'
 import type { ConversationRow } from '@/lib/supabase/database.types'
+import { serializeError } from '@/lib/utils/serializeError'
 
 import {
 	getConversationById,
@@ -66,6 +69,13 @@ export async function openOrGetConversation(input: {
 		seller_id: listing.user_id,
 	})
 	if (uErr || !row) {
+		console.error('messaging:openOrGetConversation upsert failed', {
+			listingId: input.listingId,
+			error: serializeError(uErr),
+		})
+		Sentry.captureException(uErr instanceof Error ? uErr : new Error('upsert conversation failed'), {
+			extra: { listingId: input.listingId, buyerUserId: input.buyerUserId },
+		})
 		return { data: null, error: uErr ?? new Error('UPSERT_FAILED') }
 	}
 	return { data: { id: row.id }, error: null }
@@ -90,6 +100,13 @@ export async function sendMessage(input: {
 		content: input.content,
 	})
 	if (mErr || !msg) {
+		console.error('messaging:sendMessage insert failed', {
+			conversationId: input.conversationId,
+			error: serializeError(mErr),
+		})
+		Sentry.captureException(mErr instanceof Error ? mErr : new Error('insert message failed'), {
+			extra: { conversationId: input.conversationId, userId: input.userId },
+		})
 		return { data: null, error: mErr ?? new Error('INSERT_FAILED') }
 	}
 	return { data: { id: msg.id }, error: null }
@@ -141,24 +158,31 @@ export async function listMessagesForParticipant(input: {
 	pagination: PaginatedMessages['pagination']
 	error: unknown
 }> {
+	const pageOffset = (input.page - 1) * input.limit
+	const emptyPagination = {
+		total: 0,
+		limit: input.limit,
+		offset: pageOffset,
+		hasMore: false,
+	}
+
 	const { data: conv, error: cErr } = await getConversationById(input.conversationId)
 	if (cErr || !conv) {
 		return {
 			data: null,
-			pagination: { total: 0, limit: input.limit, offset: 0, hasMore: false },
+			pagination: emptyPagination,
 			error: cErr ?? new Error('NOT_FOUND'),
 		}
 	}
 	if (conv.buyer_id !== input.userId && conv.seller_id !== input.userId) {
 		return {
 			data: null,
-			pagination: { total: 0, limit: input.limit, offset: 0, hasMore: false },
+			pagination: emptyPagination,
 			error: new Error('FORBIDDEN'),
 		}
 	}
 
-	const offset = (input.page - 1) * input.limit
-	return listMessagesForConversation(input.conversationId, input.limit, offset)
+	return listMessagesForConversation(input.conversationId, input.limit, pageOffset)
 }
 
 export async function markConversationRead(input: {
@@ -176,6 +200,13 @@ export async function markConversationRead(input: {
 
 	const { error: rpcErr } = await markMessagesReadWithUserJwt(input.accessToken, input.conversationId)
 	if (rpcErr) {
+		console.error('messaging:markConversationRead rpc failed', {
+			conversationId: input.conversationId,
+			error: serializeError(rpcErr),
+		})
+		Sentry.captureException(rpcErr instanceof Error ? rpcErr : new Error('mark_messages_read failed'), {
+			extra: { conversationId: input.conversationId, userId: input.userId },
+		})
 		return { data: null, error: rpcErr }
 	}
 	return { data: { ok: true }, error: null }
