@@ -458,6 +458,14 @@ export type Database = {
 				}
 				Returns: Json
 			}
+			transition_order: {
+				Args: {
+					p_order_id: string
+					p_new_status: OrderStatus
+					p_metadata?: Json
+				}
+				Returns: Json
+			}
 		}
 		Enums: {
 			platform_type: PlatformType
