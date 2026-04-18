@@ -26,8 +26,14 @@ export default function HomeShell() {
 				<Link className={cn(buttonVariants({ variant: "outline" }))} href="/sign-up">
 					Sign up
 				</Link>
+				<Link className={cn(buttonVariants({ variant: "outline" }))} href="/search">
+					Search listings
+				</Link>
 				<Link className={cn(buttonVariants({ variant: "outline" }))} href="/seller">
 					Seller dashboard
+				</Link>
+				<Link className={cn(buttonVariants({ variant: "outline" }))} href="/seller/listings">
+					My listings
 				</Link>
 				<Link className={cn(buttonVariants({ variant: "outline" }))} href="/buyer">
 					Buyer dashboard

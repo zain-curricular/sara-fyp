@@ -128,4 +128,3 @@ export async function getModelVariants(
 
 	return { data: extractVariantsFromSpecs(spec.specs), error: null };
 }
-
