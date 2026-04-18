@@ -126,6 +126,47 @@ export type OrderRow = {
 	updated_at: string
 }
 
+/** `report_status` / `report_target` — 20260416000001_enums.sql, table 20260416000009_social.sql */
+export type ReportStatus = 'pending' | 'reviewed' | 'resolved' | 'dismissed'
+export type ReportTarget = 'listing' | 'user'
+
+/**
+ * User-submitted moderation `reports` row.
+ */
+export type ReportRow = {
+	id: string
+	reporter_id: string
+	target_type: ReportTarget
+	target_id: string
+	reason: string
+	description: string | null
+	status: ReportStatus
+	resolved_by: string | null
+	resolved_at: string | null
+	created_at: string
+}
+
+/**
+ * Append-only `admin_audit_logs` row — 20260418000007_admin_audit_logs.sql
+ */
+export type AdminAuditLogRow = {
+	id: string
+	actor_id: string
+	action: string
+	target_type: string
+	target_id: string | null
+	metadata: Json
+	created_at: string
+}
+
+/** Materialized view `mv_admin_daily_stats` — 20260416000014_views.sql */
+export type MvAdminDailyStatsRow = {
+	stat_date: string
+	metric: string
+	platform: PlatformType | null
+	value: number
+}
+
 /**
  * `reviews` row — 20260416000009_social.sql + reviews_not_self_ck.
  */
@@ -541,6 +582,18 @@ export type Database = {
 				Update: Partial<ReviewRow>
 				Relationships: []
 			}
+			reports: {
+				Row: ReportRow
+				Insert: Partial<ReportRow> & Pick<ReportRow, 'target_type' | 'target_id' | 'reason'>
+				Update: Partial<ReportRow>
+				Relationships: []
+			}
+			admin_audit_logs: {
+				Row: AdminAuditLogRow
+				Insert: Partial<AdminAuditLogRow> & Pick<AdminAuditLogRow, 'actor_id' | 'action' | 'target_type'>
+				Update: never
+				Relationships: []
+			}
 			escrow_transactions: {
 				Row: EscrowTransactionRow
 				Insert: Partial<EscrowTransactionRow> &
@@ -627,6 +680,12 @@ export type Database = {
 				Update: never
 				Relationships: []
 			}
+			mv_admin_daily_stats: {
+				Row: MvAdminDailyStatsRow
+				Insert: never
+				Update: never
+				Relationships: []
+			}
 		}
 		Functions: {
 			complete_subscription_escrow: {
@@ -700,6 +759,8 @@ export type Database = {
 			claim_status: ClaimStatus
 			spare_part_status: SparePartStatus
 			notification_type: NotificationType
+			report_status: ReportStatus
+			report_target: ReportTarget
 		}
 		CompositeTypes: Record<never, never>
 	}
