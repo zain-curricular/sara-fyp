@@ -20,7 +20,15 @@ export { getOrderDetailForParticipant, listOrdersForCurrentUser } from './_utils
 export { initiateOrderPaymentForBuyer } from './_utils/initiateOrderPayment'
 export { applyOrderPaymentWebhook } from './_utils/orderPaymentWebhookService'
 export { verifyOrderPaymentWebhookSecret } from './_utils/orderWebhookAuth'
+export type {
+	TransitionOrderForParticipantError,
+	TransitionOrderForParticipantResult,
+} from './_utils/orderTransitionService'
 export { transitionOrderForParticipant } from './_utils/orderTransitionService'
+export {
+	orderPaymentWebhookErrorToHttp,
+	transitionOrderOutcomeToHttpPayload,
+} from './_utils/orderApiHttp'
 export {
 	parseTransitionOrderRpcPayload,
 	transitionOrderWithServiceRole,

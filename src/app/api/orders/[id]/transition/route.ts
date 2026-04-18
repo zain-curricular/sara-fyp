@@ -6,7 +6,10 @@ import { NextResponse } from 'next/server'
 
 import { authenticateFromRequest, getBearerTokenFromRequest } from '@/lib/auth/auth'
 import { transitionOrderBodySchema } from '@/lib/features/orders'
-import { transitionOrderForParticipant } from '@/lib/features/orders/services'
+import {
+	transitionOrderForParticipant,
+	transitionOrderOutcomeToHttpPayload,
+} from '@/lib/features/orders/services'
 import { isValidationError, validateRequestBody } from '@/lib/utils/validateRequestBody'
 import { uuidValidation } from '@/lib/validation'
 import { serializeError } from '@/lib/utils/serializeError'
@@ -39,7 +42,7 @@ export async function POST(
 			return validation.error
 		}
 
-		const { data, error } = await transitionOrderForParticipant(
+		const result = await transitionOrderForParticipant(
 			token,
 			auth.user.id,
 			idParse.data,
@@ -47,24 +50,8 @@ export async function POST(
 			validation.data.metadata,
 		)
 
-		if (error) {
-			const msg = error instanceof Error ? error.message : String(error)
-			if (msg === 'NOT_FOUND') {
-				return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 })
-			}
-			if (msg === 'FORBIDDEN') {
-				return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 })
-			}
-			if (msg === 'INVALID_TRANSITION') {
-				return NextResponse.json({ ok: false, error: 'Invalid transition' }, { status: 409 })
-			}
-			if (msg === 'EMPTY_RESPONSE') {
-				return NextResponse.json({ ok: false, error: 'Transition failed' }, { status: 500 })
-			}
-			return NextResponse.json({ ok: false, error: 'Failed to transition order' }, { status: 500 })
-		}
-
-		return NextResponse.json({ ok: true, data }, { status: 200 })
+		const { status: httpStatus, body: jsonBody } = transitionOrderOutcomeToHttpPayload(result)
+		return NextResponse.json(jsonBody, { status: httpStatus })
 	} catch (error) {
 		Sentry.captureException(error, { extra: { route: 'POST /api/orders/[id]/transition' } })
 		console.error('UNEXPECTED: POST /api/orders/[id]/transition', { error: serializeError(error) })

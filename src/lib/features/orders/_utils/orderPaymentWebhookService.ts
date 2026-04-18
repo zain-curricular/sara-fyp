@@ -1,8 +1,16 @@
 // ============================================================================
 // Orders — payment gateway webhook → escrow complete + payment_received
 // ============================================================================
+//
+// Ordering: `transition_order` runs before marking the escrow hold completed.
+// If the escrow row update fails after a successful transition, the order may
+// be `payment_received` while the hold still shows pending — ops must reconcile
+// (escrow id + order id are logged to Sentry).
+
+import * as Sentry from '@sentry/nextjs'
 
 import { logDatabaseError } from '@/lib/observability/logDatabaseError'
+import { serializeError } from '@/lib/utils/serializeError'
 
 import {
 	getEscrowTransactionById,
@@ -59,9 +67,48 @@ export async function applyOrderPaymentWebhook(input: {
 	})
 
 	if (rpcErr) {
+		console.error('transition_order RPC transport failed (order payment webhook)', {
+			orderId,
+			escrowId: input.escrow_transaction_id,
+			error: serializeError(rpcErr),
+		})
+		Sentry.captureException(
+			rpcErr instanceof Error ? rpcErr : new Error('transition_order RPC failed (webhook)'),
+			{
+				extra: {
+					orderId,
+					escrowId: input.escrow_transaction_id,
+					error: serializeError(rpcErr),
+					operation: 'transition_order',
+					context: 'order_payment_webhook',
+				},
+			},
+		)
 		return { data: null, error: rpcErr }
 	}
-	if (!tr?.ok) {
+	if (!tr || !tr.ok) {
+		const from = !tr || tr.ok ? undefined : tr.from
+		const to = !tr || tr.ok ? undefined : tr.to
+		const message = !tr || tr.ok ? undefined : tr.error
+		console.warn('transition_order invalid transition (order payment webhook)', {
+			orderId,
+			escrowId: input.escrow_transaction_id,
+			from,
+			to,
+			message,
+		})
+		Sentry.captureMessage('transition_order invalid transition (order payment webhook)', {
+			level: 'warning',
+			extra: {
+				orderId,
+				escrowId: input.escrow_transaction_id,
+				from,
+				to,
+				message,
+				operation: 'transition_order',
+				context: 'order_payment_webhook',
+			},
+		})
 		return { data: null, error: new Error('TRANSITION_FAILED') }
 	}
 
@@ -75,7 +122,17 @@ export async function applyOrderPaymentWebhook(input: {
 			{ escrowId: input.escrow_transaction_id, orderId },
 			uErr,
 		)
-		return { data: null, error: uErr }
+		Sentry.captureMessage('Order payment webhook: escrow update failed after successful transition', {
+			level: 'fatal',
+			tags: { reconciliation_required: 'true' },
+			extra: {
+				orderId,
+				escrowId: input.escrow_transaction_id,
+				error: serializeError(uErr),
+				hint: 'Order may be payment_received while escrow hold row is not completed.',
+			},
+		})
+		return { data: null, error: new Error('ESCROW_UPDATE_AFTER_TRANSITION') }
 	}
 
 	return { data: { processed: true }, error: null }

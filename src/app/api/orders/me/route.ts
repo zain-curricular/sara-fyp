@@ -9,7 +9,7 @@ import { listOrdersForCurrentUser } from '@/lib/features/orders/services'
 import { serializeError } from '@/lib/utils/serializeError'
 import * as Sentry from '@sentry/nextjs'
 
-export async function GET() {
+export async function GET(request: Request) {
 	try {
 		const auth = await authenticateFromRequest(request)
 		if (auth.error) {

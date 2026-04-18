@@ -5,7 +5,11 @@
 import { NextResponse } from 'next/server'
 
 import { orderPaymentWebhookBodySchema } from '@/lib/features/orders'
-import { applyOrderPaymentWebhook, verifyOrderPaymentWebhookSecret } from '@/lib/features/orders/services'
+import {
+	applyOrderPaymentWebhook,
+	orderPaymentWebhookErrorToHttp,
+	verifyOrderPaymentWebhookSecret,
+} from '@/lib/features/orders/services'
 import { getClientIpFromRequest } from '@/lib/utils/clientIp'
 import { isValidationError, validateRequestBody } from '@/lib/utils/validateRequestBody'
 import { checkPaymentWebhookRateLimit, isRateLimited } from '@/lib/utils/rateLimit'
@@ -39,20 +43,8 @@ export async function POST(request: Request) {
 		})
 
 		if (error) {
-			const msg = error instanceof Error ? error.message : String(error)
-			if (msg === 'NOT_FOUND' || msg === 'ORDER_NOT_FOUND') {
-				return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 })
-			}
-			if (msg === 'NOT_ORDER_HOLD') {
-				return NextResponse.json({ ok: false, error: 'Invalid escrow transaction' }, { status: 400 })
-			}
-			if (msg === 'INVALID_ORDER_STATE') {
-				return NextResponse.json({ ok: false, error: 'Invalid order state' }, { status: 409 })
-			}
-			if (msg === 'TRANSITION_FAILED') {
-				return NextResponse.json({ ok: false, error: 'Failed to update order' }, { status: 500 })
-			}
-			return NextResponse.json({ ok: false, error: 'Webhook processing failed' }, { status: 500 })
+			const { status: httpStatus, body } = orderPaymentWebhookErrorToHttp(error)
+			return NextResponse.json(body, { status: httpStatus })
 		}
 
 		return NextResponse.json({ ok: true, data: { processed: true } }, { status: 200 })
