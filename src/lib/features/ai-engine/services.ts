@@ -24,5 +24,6 @@ export { generateListingDescription } from './description-generator/services'
 export {
 	generateAiRating,
 	regenerateAiRatingForListing,
+	isApprovedReportForAiRating,
 	type AiRatingPayload,
 } from './rating-engine/services'

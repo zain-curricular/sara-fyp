@@ -3,8 +3,9 @@
 // ============================================================================
 
 import * as Sentry from '@sentry/nextjs'
+import { after } from 'next/server'
 
-import { generateAiRating } from '@/lib/features/ai-engine/services'
+import { AiError, generateAiRating } from '@/lib/features/ai-engine/services'
 import { getListingById } from '@/lib/features/listings/core/services'
 import { getOrderById } from '@/lib/features/orders/services'
 import {
@@ -12,7 +13,7 @@ import {
 	transitionOrderWithServiceRole,
 } from '@/lib/features/orders/services'
 import { getCategoryById } from '@/lib/features/product-catalog/services'
-import type { Json } from '@/lib/supabase/database.types'
+import type { CategoryRow, Json, ListingRow, TestReportRow } from '@/lib/supabase/database.types'
 import { getAdmin } from '@/lib/supabase/clients/adminClient'
 import { serializeError } from '@/lib/utils/serializeError'
 
@@ -28,6 +29,60 @@ const REPORT_ALLOWED_ORDER_STATUSES: readonly string[] = ['payment_received', 's
 
 function isRecord(v: unknown): v is Record<string, unknown> {
 	return typeof v === 'object' && v !== null && !Array.isArray(v)
+}
+
+/**
+ * Runs AI rating after an approved inspection (invoked from `after()` so submit returns quickly).
+ * Exported for unit tests.
+ */
+export async function runGenerateAiRatingAfterApproval(input: {
+	listing: ListingRow
+	report: TestReportRow
+	category: CategoryRow
+}): Promise<void> {
+	try {
+		const aiRes = await generateAiRating({
+			listing: input.listing,
+			report: input.report,
+			category: input.category,
+			userId: input.listing.user_id,
+		})
+		if (aiRes.error) {
+			const err = aiRes.error
+			const extra = {
+				orderId: input.report.order_id,
+				reportId: input.report.id,
+				listingId: input.listing.id,
+				categoryId: input.category.id,
+				step: 'rating_engine_post_approval',
+				error: serializeError(err),
+				...(AiError.isAiError(err) ? { aiCode: err.code } : {}),
+			}
+			console.error('rating_engine: generateAiRating failed after approval', extra)
+			Sentry.captureMessage('rating_engine: generateAiRating failed after approval', {
+				level: 'warning',
+				extra,
+				tags: { feature: 'rating_engine', phase: 'post_submit_after' },
+			})
+			if (AiError.isAiError(err)) {
+				Sentry.captureException(err, {
+					extra,
+					tags: { feature: 'rating_engine' },
+				})
+			}
+		}
+	} catch (unexpected) {
+		console.error('rating_engine: unexpected error in runGenerateAiRatingAfterApproval', serializeError(unexpected))
+		Sentry.captureException(unexpected instanceof Error ? unexpected : new Error(String(unexpected)), {
+			extra: {
+				orderId: input.report.order_id,
+				reportId: input.report.id,
+				listingId: input.listing.id,
+				step: 'rating_engine_post_approval_unexpected',
+			},
+			tags: { feature: 'rating_engine' },
+		})
+	}
 }
 
 function isPostgresUniqueViolation(error: unknown): boolean {
@@ -271,23 +326,13 @@ export async function submitTestReport(input: {
 			overall_notes: input.overall_notes,
 			passed: input.passed,
 		}
-		const aiRes = await generateAiRating({
-			listing,
-			report: reportForAi,
-			category,
-			userId: listing.user_id,
-		})
-		if (aiRes.error) {
-			console.error('rating_engine: generateAiRating failed after approval', serializeError(aiRes.error))
-			Sentry.captureMessage('rating_engine: generateAiRating failed after approval', {
-				level: 'warning',
-				extra: {
-					orderId: report.order_id,
-					listingId: listing.id,
-					error: serializeError(aiRes.error),
-				},
-			})
-		}
+		after(() =>
+			runGenerateAiRatingAfterApproval({
+				listing,
+				report: reportForAi,
+				category,
+			}),
+		)
 	}
 
 	return { data: { order_id: report.order_id }, error: null }

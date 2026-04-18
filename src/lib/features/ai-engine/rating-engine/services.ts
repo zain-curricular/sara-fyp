@@ -23,6 +23,11 @@ import { buildRatingPromptMobile, ratingMobileSystemPrompt } from './_prompts/ra
 
 export type AiRatingPayload = RatingMobileOutput | RatingAutomotiveOutput
 
+/** Approved inspection only — same rule as auto-trigger after submit (`passed === true`). */
+export function isApprovedReportForAiRating(tr: TestReportRow | null): boolean {
+	return tr !== null && tr.passed === true
+}
+
 function isAutomotiveListing(listing: ListingRow): boolean {
 	return listing.platform === 'automotive'
 }
@@ -124,7 +129,7 @@ export async function regenerateAiRatingForListing(input: {
 		if (trErr) {
 			return { data: null, error: new ListingServiceError('INTERNAL', 'Failed to load test report') }
 		}
-		if (tr && tr.passed !== null) {
+		if (isApprovedReportForAiRating(tr)) {
 			report = tr
 			break
 		}
