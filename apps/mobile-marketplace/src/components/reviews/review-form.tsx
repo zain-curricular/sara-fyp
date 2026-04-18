@@ -73,8 +73,12 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
 	}
 
 	return (
-		<form className="flex max-w-lg flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
-			<Field className="space-y-2">
+		<form
+			className="flex max-w-lg flex-col gap-6"
+			aria-label="Submit review"
+			onSubmit={(e) => void onSubmit(e)}
+		>
+			<Field className="space-y-2" data-invalid={false}>
 				<FieldLabel
 					id="review-rating-label"
 					className="w-fit cursor-pointer"
@@ -95,7 +99,7 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
 					End jump to 1 and 5.
 				</FieldDescription>
 			</Field>
-			<Field className="space-y-2">
+			<Field className="space-y-2" data-invalid={false}>
 				<FieldLabel htmlFor="review-comment">Comment (optional)</FieldLabel>
 				<Textarea
 					id="review-comment"

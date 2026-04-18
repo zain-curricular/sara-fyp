@@ -30,19 +30,25 @@ vi.mock("@/lib/features/reviews", async (importOriginal) => {
 });
 
 describe("ReviewForm", () => {
+	const orderId = "550e8400-e29b-41d4-a716-446655440000";
+
 	beforeEach(() => {
 		mocks.push.mockClear();
 		mocks.submitReview.mockReset();
 		mocks.submitReview.mockResolvedValue({ ok: true });
 	});
 
-	const orderId = "550e8400-e29b-41d4-a716-446655440000";
+	function ratingLabelEl() {
+		return document.getElementById("review-rating-label");
+	}
 
 	it("focuses the rating slider when the Rating label is clicked", async () => {
 		render(<ReviewForm orderId={orderId} />);
 		const slider = screen.getByRole("slider", { name: "Rating" });
 		expect(slider).not.toHaveFocus();
-		fireEvent.click(screen.getByText("Rating"));
+		const label = ratingLabelEl();
+		expect(label).not.toBeNull();
+		fireEvent.click(label!);
 		await waitFor(() => {
 			expect(slider).toHaveFocus();
 		});
@@ -50,7 +56,9 @@ describe("ReviewForm", () => {
 
 	it("wires aria-labelledby and aria-describedby on the slider", async () => {
 		render(<ReviewForm orderId={orderId} />);
-		const slider = screen.getByRole("slider", { name: "Rating" });
+		const form = screen.getByRole("form", { name: "Submit review" });
+		expect(form).toBeInTheDocument();
+		const slider = within(form).getByRole("slider", { name: "Rating" });
 		await waitFor(() => {
 			expect(slider).toHaveAttribute("aria-labelledby", "review-rating-label");
 		});
@@ -60,7 +68,8 @@ describe("ReviewForm", () => {
 
 	it("submits the review and navigates to /buyer on success", async () => {
 		render(<ReviewForm orderId={orderId} />);
-		const slider = screen.getByRole("slider", { name: "Rating" });
+		const form = screen.getByRole("form", { name: "Submit review" });
+		const slider = within(form).getByRole("slider", { name: "Rating" });
 		const row = within(slider).getByTestId("review-stars-segments");
 		fireEvent.click(row.children[3]!);
 
@@ -74,5 +83,21 @@ describe("ReviewForm", () => {
 			});
 		});
 		expect(mocks.push).toHaveBeenCalledWith("/buyer");
+	});
+
+	it("does not navigate when submit returns an error", async () => {
+		mocks.submitReview.mockResolvedValueOnce({ ok: false, error: "Server error" });
+		render(<ReviewForm orderId={orderId} />);
+		const form = screen.getByRole("form", { name: "Submit review" });
+		const slider = within(form).getByRole("slider", { name: "Rating" });
+		const row = within(slider).getByTestId("review-stars-segments");
+		fireEvent.click(row.children[2]!);
+
+		fireEvent.click(screen.getByRole("button", { name: "Submit review" }));
+
+		await waitFor(() => {
+			expect(mocks.submitReview).toHaveBeenCalled();
+		});
+		expect(mocks.push).not.toHaveBeenCalled();
 	});
 });

@@ -51,7 +51,13 @@ export type ReviewStarsProps = {
 /**
  * Star rating: interactive slider with arrow keys and star clicks, or read-only stars.
  *
- * @param props - See {@link ReviewStarsProps}.
+ * @param props.value - Current rating (0–5).
+ * @param props.onChange - Invoked with 1–5 when the value changes (interactive only).
+ * @param props.readOnly - Renders static stars when true.
+ * @param props.className - Optional root class names.
+ * @param props.id - DOM id for the interactive slider root.
+ * @param props.labelId - Id of the labelling element for `aria-labelledby` when present in the DOM.
+ * @param props.ariaDescribedBy - Optional id of hint/description text.
  * @returns The interactive slider or read-only star row.
  */
 export const ReviewStars = forwardRef<HTMLDivElement, ReviewStarsProps>(
@@ -110,7 +116,8 @@ export const ReviewStars = forwardRef<HTMLDivElement, ReviewStarsProps>(
 			}
 		}
 
-		const showTestSegments = process.env.NODE_ENV === "test";
+		const showTestSegments =
+			typeof process !== "undefined" && Boolean(process.env.VITEST);
 
 		if (interactive && onChange) {
 			return (
