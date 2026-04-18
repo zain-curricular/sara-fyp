@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import ListingDetailShell from "./shell";
 
-import { getListingDetailForViewer } from "@/lib/features/listings/services";
+import { getListingDetailPagePayload } from "@/lib/features/listings/services";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export default async function ListingDetailPage({
@@ -17,13 +17,15 @@ export default async function ListingDetailPage({
 		data: { user },
 	} = await supabase.auth.getUser();
 
-	const { data: detail, error } = await getListingDetailForViewer(id, user?.id ?? null);
+	const { data, error } = await getListingDetailPagePayload(id, user?.id ?? null);
 	if (error) {
 		throw new Error("Failed to load listing");
 	}
-	if (!detail) {
+	if (!data) {
 		notFound();
 	}
 
-	return <ListingDetailShell listing={detail.listing} images={detail.images} />;
+	return (
+		<ListingDetailShell listing={data.listing} images={data.images} sellerReviews={data.sellerReviews} />
+	);
 }

@@ -19,6 +19,9 @@ export default function BuyerShell() {
 				<Link className={cn(buttonVariants({ variant: "outline" }), "w-fit")} href="/buyer/viewed">
 					Recently viewed
 				</Link>
+				<p className="text-xs text-muted-foreground">
+					When an order is completed, open your review link from order details (path: buyer → orders → review).
+				</p>
 				<Link
 					className={cn(buttonVariants({ variant: "outline" }), "w-fit")}
 					href="/buyer/settings/profile"

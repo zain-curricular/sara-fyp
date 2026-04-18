@@ -3,9 +3,11 @@
 import Link from "next/link";
 
 import type { ListingImageRecord, ListingRecord } from "@/lib/features/listings";
+import type { ReviewsListPayload } from "@/lib/features/reviews/types";
 import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { RecordListingView } from "@/components/favorites/record-listing-view";
 import { ListingDetailGallery } from "@/components/listings/listing-detail-gallery";
+import { ReviewsList } from "@/components/reviews/reviews-list";
 import { ListingSpecsTable } from "@/components/listings/listing-specs-table";
 import { Badge } from "@/components/primitives/badge";
 import { Button, buttonVariants } from "@/components/primitives/button";
@@ -15,9 +17,10 @@ import { cn } from "@/lib/utils";
 type ListingDetailShellProps = {
 	listing: ListingRecord;
 	images: ListingImageRecord[];
+	sellerReviews: ReviewsListPayload;
 };
 
-export default function ListingDetailShell({ listing, images }: ListingDetailShellProps) {
+export default function ListingDetailShell({ listing, images, sellerReviews }: ListingDetailShellProps) {
 	return (
 		<div className="flex flex-col gap-8">
 			<RecordListingView listingId={listing.id} />
@@ -49,6 +52,20 @@ export default function ListingDetailShell({ listing, images }: ListingDetailShe
 			</Card>
 
 			<ListingSpecsTable listing={listing} />
+
+			<Card size="sm">
+				<CardHeader>
+					<CardTitle className="text-base">Seller reviews</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<ReviewsList
+						key={listing.user_id}
+						sellerId={listing.user_id}
+						initial={sellerReviews}
+						emptyMessage="This seller has no reviews yet."
+					/>
+				</CardContent>
+			</Card>
 
 			<div className="flex flex-wrap gap-3">
 				<Button type="button" disabled>

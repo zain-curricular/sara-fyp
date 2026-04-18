@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { z } from "zod";
 
-import { fetchPublicProfile } from "@/lib/features/profiles/fetch-public-profile";
+import { fetchSellerPublicPagePayload } from "@/lib/features/reviews/services";
 
 import SellerPublicShell from "./shell";
 
@@ -15,10 +15,10 @@ export default async function SellerPublicPage({ params }: Props) {
 		notFound();
 	}
 
-	const profile = await fetchPublicProfile(id);
-	if (!profile) {
+	const payload = await fetchSellerPublicPagePayload(id);
+	if (!payload) {
 		notFound();
 	}
 
-	return <SellerPublicShell profile={profile} />;
+	return <SellerPublicShell profile={payload.profile} reviewsInitial={payload.reviewsInitial} />;
 }

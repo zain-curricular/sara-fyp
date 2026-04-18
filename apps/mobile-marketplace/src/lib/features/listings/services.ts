@@ -9,6 +9,8 @@ import {
 	SEARCH_Q_MAX,
 	SEARCH_Q_TSVECTOR_MIN,
 } from "@/lib/features/listings/config";
+import { fetchProfileReviewsPage } from "@/lib/features/reviews/services";
+import type { ReviewsListPayload } from "@/lib/features/reviews/types";
 import type {
 	CategoryOption,
 	ListingImageRecord,
@@ -148,6 +150,30 @@ export async function getListingDetailForViewer(
 	}
 
 	return { data: { listing, images: images ?? [] }, error: null };
+}
+
+export type ListingDetailPagePayload = ListingDetailForViewerPayload & {
+	sellerReviews: ReviewsListPayload;
+};
+
+/**
+ * Listing detail RSC: listing + images + seller reviews (first page).
+ * Propagates errors from the reviews API (no silent empty state).
+ */
+export async function getListingDetailPagePayload(
+	listingId: string,
+	viewerUserId: string | null,
+): Promise<{ data: ListingDetailPagePayload | null; error: unknown }> {
+	const { data: detail, error } = await getListingDetailForViewer(listingId, viewerUserId);
+	if (error) {
+		return { data: null, error };
+	}
+	if (!detail) {
+		return { data: null, error: null };
+	}
+
+	const sellerReviews = await fetchProfileReviewsPage(detail.listing.user_id, 1, 5);
+	return { data: { ...detail, sellerReviews }, error: null };
 }
 
 /** Seller dashboard: non-deleted listings for the signed-in user. */
