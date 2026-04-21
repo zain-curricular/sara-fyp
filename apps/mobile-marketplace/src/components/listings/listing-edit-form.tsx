@@ -55,12 +55,19 @@ export function ListingEditForm({ listing, categories }: ListingEditFormProps) {
 	}
 
 	return (
-		<Card size="sm">
+		<Card size="sm" container-id="listing-edit-form">
 			<CardHeader>
 				<CardTitle className="text-base">Edit listing</CardTitle>
 			</CardHeader>
-			<CardContent className="flex flex-col gap-4">
-				{error ? <p className="text-sm text-destructive">{error}</p> : null}
+			<CardContent className="flex flex-col gap-5">
+				{error ? (
+					<p
+						role="alert"
+						className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+					>
+						{error}
+					</p>
+				) : null}
 				<Field>
 					<FieldLabel>Category</FieldLabel>
 					<Select
@@ -69,7 +76,7 @@ export function ListingEditForm({ listing, categories }: ListingEditFormProps) {
 							if (v) setCategoryId(v);
 						}}
 					>
-						<SelectTrigger>
+						<SelectTrigger className="w-full">
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
@@ -94,7 +101,7 @@ export function ListingEditForm({ listing, categories }: ListingEditFormProps) {
 						rows={4}
 					/>
 				</Field>
-				<div className="grid grid-cols-2 gap-3">
+				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<Field>
 						<FieldLabel htmlFor="ed-price">Price</FieldLabel>
 						<Input
@@ -117,7 +124,7 @@ export function ListingEditForm({ listing, categories }: ListingEditFormProps) {
 							if (v) setCondition(v as (typeof CONDITIONS)[number]);
 						}}
 					>
-						<SelectTrigger>
+						<SelectTrigger className="w-full">
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
@@ -129,7 +136,12 @@ export function ListingEditForm({ listing, categories }: ListingEditFormProps) {
 						</SelectContent>
 					</Select>
 				</Field>
-				<Button type="button" disabled={busy} onClick={() => void onSave()}>
+				<Button
+					type="button"
+					className="w-full sm:w-fit sm:self-end"
+					disabled={busy}
+					onClick={() => void onSave()}
+				>
 					Save changes
 				</Button>
 			</CardContent>

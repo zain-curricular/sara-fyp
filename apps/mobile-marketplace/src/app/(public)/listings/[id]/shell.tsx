@@ -22,10 +22,11 @@ type ListingDetailShellProps = {
 
 export default function ListingDetailShell({ listing, images, sellerReviews }: ListingDetailShellProps) {
 	return (
-		<div className="flex flex-col gap-8">
+		<div container-id="listing-detail-shell" className="flex flex-col gap-10">
 			<RecordListingView listingId={listing.id} />
-			<div className="space-y-2">
-				<div className="flex flex-wrap items-center justify-between gap-3">
+
+			<header container-id="listing-detail-header" className="flex flex-col gap-4">
+				<div container-id="listing-detail-meta" className="flex flex-wrap items-center justify-between gap-3">
 					<div className="flex flex-wrap items-center gap-2">
 						<Badge variant="secondary">{listing.status}</Badge>
 						<Badge variant="secondary">{listing.condition}</Badge>
@@ -33,50 +34,76 @@ export default function ListingDetailShell({ listing, images, sellerReviews }: L
 					</div>
 					<FavoriteButton listingId={listing.id} />
 				</div>
-				<h1 className="text-2xl font-semibold tracking-tight">{listing.title}</h1>
-				<p className="text-3xl font-semibold tabular-nums">${listing.price.toLocaleString()}</p>
-				<p className="text-sm text-muted-foreground">{listing.city}</p>
-			</div>
-
-			<ListingDetailGallery images={images} title={listing.title} />
-
-			<Card size="sm">
-				<CardHeader>
-					<CardTitle className="text-base">Description</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<p className="whitespace-pre-wrap text-sm text-muted-foreground">
-						{listing.description ?? "No description."}
+				<div className="flex flex-col gap-2">
+					<h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+						{listing.title}
+					</h1>
+					<p className="text-3xl font-semibold tabular-nums sm:text-4xl">
+						${listing.price.toLocaleString()}
 					</p>
-				</CardContent>
-			</Card>
+					<p className="text-sm text-muted-foreground">{listing.city}</p>
+				</div>
+			</header>
 
-			<ListingSpecsTable listing={listing} />
+			<div
+				container-id="listing-detail-grid"
+				className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-10"
+			>
+				<div container-id="listing-detail-main" className="flex min-w-0 flex-col gap-8">
+					<ListingDetailGallery images={images} title={listing.title} />
 
-			<Card size="sm">
-				<CardHeader>
-					<CardTitle className="text-base">Seller reviews</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<ReviewsList
-						key={listing.user_id}
-						sellerId={listing.user_id}
-						initial={sellerReviews}
-						emptyMessage="This seller has no reviews yet."
-					/>
-				</CardContent>
-			</Card>
+					<Card size="sm">
+						<CardHeader>
+							<CardTitle className="text-base">Description</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+								{listing.description ?? "No description."}
+							</p>
+						</CardContent>
+					</Card>
 
-			<div className="flex flex-wrap gap-3">
-				<Button type="button" disabled>
-					Buy now (escrow)
-				</Button>
-				<Button type="button" variant="outline" disabled>
-					Place bid
-				</Button>
-				<Link href="/search" className={cn(buttonVariants({ variant: "outline" }))}>
-					Back to search
-				</Link>
+					<ListingSpecsTable listing={listing} />
+
+					<Card size="sm">
+						<CardHeader>
+							<CardTitle className="text-base">Seller reviews</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<ReviewsList
+								key={listing.user_id}
+								sellerId={listing.user_id}
+								initial={sellerReviews}
+								emptyMessage="This seller has no reviews yet."
+							/>
+						</CardContent>
+					</Card>
+				</div>
+
+				<aside
+					container-id="listing-detail-side"
+					className="flex flex-col gap-3 lg:sticky lg:top-24 lg:self-start"
+				>
+					<Card size="sm">
+						<CardHeader>
+							<CardTitle className="text-base">Take action</CardTitle>
+						</CardHeader>
+						<CardContent className="flex flex-col gap-2">
+							<Button type="button" disabled>
+								Buy now (escrow)
+							</Button>
+							<Button type="button" variant="outline" disabled>
+								Place bid
+							</Button>
+							<Link
+								href="/search"
+								className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full")}
+							>
+								Back to search
+							</Link>
+						</CardContent>
+					</Card>
+				</aside>
 			</div>
 		</div>
 	);

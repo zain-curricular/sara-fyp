@@ -66,31 +66,47 @@ export default function SearchShell({ listings, pagination, params }: SearchShel
 		`/search${toListingsApiQuery({ ...params, platform: params.platform ?? "mobile", page: p })}`;
 
 	return (
-		<div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-			<div className="hidden w-full max-w-xs shrink-0 lg:block">
+		<div
+			container-id="search-shell"
+			className="flex flex-col gap-8 lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start lg:gap-10"
+		>
+			<aside container-id="search-sidebar-desktop" className="hidden lg:sticky lg:top-24 lg:block">
 				<SearchFiltersSidebar initial={params} />
-			</div>
+			</aside>
 
-			<div className="flex min-w-0 flex-1 flex-col gap-6">
-				<div className="space-y-2">
-					<h1 className="text-2xl font-semibold tracking-tight">Search listings</h1>
-					<p className="text-sm text-muted-foreground">
-						{pagination.total} result{pagination.total === 1 ? "" : "s"}
-					</p>
+			<div container-id="search-main" className="flex min-w-0 flex-col gap-6">
+				<header container-id="search-header" className="flex flex-col gap-3">
+					<div className="flex flex-wrap items-end justify-between gap-2">
+						<h1 className="text-3xl font-semibold tracking-tight">Search listings</h1>
+						<p className="text-sm text-muted-foreground tabular-nums">
+							{pagination.total} result{pagination.total === 1 ? "" : "s"}
+						</p>
+					</div>
 					<FilterChips chips={chips} />
-				</div>
+				</header>
 
-				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+				<div
+					container-id="search-results-grid"
+					className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+				>
 					{listings.map((l) => (
 						<ListingCard key={l.id} listing={l} />
 					))}
 				</div>
 
 				{listings.length === 0 ? (
-					<p className="text-sm text-muted-foreground">No listings match your filters.</p>
+					<div
+						container-id="search-empty"
+						className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border py-12 text-center"
+					>
+						<p className="text-sm font-medium">No listings match your filters.</p>
+						<p className="text-xs text-muted-foreground">
+							Try removing a filter or broadening your search.
+						</p>
+					</div>
 				) : null}
 
-				<div className="flex flex-wrap items-center gap-2">
+				<div container-id="search-pagination" className="flex flex-wrap items-center justify-end gap-2 pt-2">
 					{prevPage !== null ? (
 						<Link
 							href={hrefBase(prevPage)}
@@ -110,7 +126,7 @@ export default function SearchShell({ listings, pagination, params }: SearchShel
 				</div>
 			</div>
 
-			<div className="lg:hidden">
+			<div container-id="search-sidebar-mobile" className="lg:hidden">
 				<SearchFiltersSidebar initial={params} />
 			</div>
 		</div>

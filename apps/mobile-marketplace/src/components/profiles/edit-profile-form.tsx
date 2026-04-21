@@ -62,7 +62,8 @@ export function EditProfileForm({ profile }: { profile: OwnProfile }) {
 
 	return (
 		<form
-			className="flex max-w-xl flex-col gap-8"
+			className="flex w-full flex-col gap-8 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8"
+			container-id="edit-profile-form"
 			onSubmit={form.handleSubmit((values) => {
 				update.mutate(stripEmpty(values));
 			})}
@@ -90,7 +91,7 @@ export function EditProfileForm({ profile }: { profile: OwnProfile }) {
 						<Input id="phone_number" type="tel" {...form.register("phone_number")} />
 						<FieldError errors={[form.formState.errors.phone_number]} />
 					</Field>
-					<div className="grid grid-cols-2 gap-3">
+					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 						<Field data-invalid={!!form.formState.errors.city}>
 							<FieldLabel htmlFor="city">City</FieldLabel>
 							<Input id="city" {...form.register("city")} />
@@ -131,7 +132,7 @@ export function EditProfileForm({ profile }: { profile: OwnProfile }) {
 					</Field>
 				</FieldGroup>
 			</FieldSet>
-			<Button disabled={update.isPending} type="submit">
+			<Button disabled={update.isPending} type="submit" className="w-full sm:w-fit sm:self-end">
 				{update.isPending ? "Saving…" : "Save changes"}
 			</Button>
 		</form>

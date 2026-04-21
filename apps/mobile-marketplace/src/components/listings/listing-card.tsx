@@ -13,10 +13,16 @@ type ListingCardProps = {
 
 export function ListingCard({ listing, className }: ListingCardProps) {
 	return (
-		<Link href={`/listings/${listing.id}`} className={cn("block", className)}>
-			<Card size="sm" className="cursor-pointer transition-colors hover:bg-accent/40">
+		<Link
+			href={`/listings/${listing.id}`}
+			className={cn("group block focus:outline-none", className)}
+		>
+			<Card
+				size="sm"
+				className="h-full cursor-pointer transition-all group-hover:border-foreground/20 group-hover:bg-accent/40 group-hover:shadow-sm group-focus-visible:ring-2 group-focus-visible:ring-ring"
+			>
 				<CardHeader>
-					<CardTitle className="line-clamp-2 text-base">{listing.title}</CardTitle>
+					<CardTitle className="line-clamp-2 pr-10 text-base">{listing.title}</CardTitle>
 					<CardAction
 						className="z-10"
 						onClick={(e) => {

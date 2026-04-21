@@ -7,12 +7,14 @@ type ListingSummaryCardProps = {
 
 export function ListingSummaryCard({ listing }: ListingSummaryCardProps) {
 	return (
-		<Card size="sm">
+		<Card size="sm" className="h-full transition-colors hover:bg-accent/40">
 			<CardHeader>
-				<CardTitle className="text-base">{listing.title}</CardTitle>
+				<CardTitle className="line-clamp-2 text-base">{listing.title}</CardTitle>
 			</CardHeader>
-			<CardContent className="flex flex-col gap-1">
-				<p className="text-sm font-medium tabular-nums">${listing.price.toLocaleString()}</p>
+			<CardContent className="flex flex-col gap-1.5">
+				<p className="text-base font-semibold tabular-nums">
+					${listing.price.toLocaleString()}
+				</p>
 				<p className="text-sm text-muted-foreground">
 					{listing.city} · {listing.condition}
 				</p>

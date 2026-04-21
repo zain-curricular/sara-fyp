@@ -8,12 +8,24 @@ const navLinkClass =
 
 export function SiteHeader() {
 	return (
-		<header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur">
-			<div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-				<Link href="/" className="text-sm font-semibold tracking-tight">
+		<header
+			container-id="site-header"
+			className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70"
+		>
+			<div
+				container-id="site-header-inner"
+				className="mx-auto flex h-14 w-full max-w-6xl items-center gap-6 px-4 sm:h-16 sm:px-6 lg:px-8"
+			>
+				<Link
+					href="/"
+					className="text-sm font-semibold tracking-tight whitespace-nowrap sm:text-base"
+				>
 					Mobile marketplace
 				</Link>
-				<nav aria-label="Main" className="hidden items-center gap-6 sm:flex">
+				<nav
+					aria-label="Main"
+					className="hidden flex-1 items-center justify-center gap-6 sm:flex lg:gap-8"
+				>
 					<Link className={navLinkClass} href="/">
 						Browse
 					</Link>
@@ -24,7 +36,7 @@ export function SiteHeader() {
 						Buy
 					</Link>
 				</nav>
-				<div className="flex items-center gap-2">
+				<div className="ml-auto flex items-center gap-2 sm:ml-0">
 					<Link className={cn(buttonVariants({ variant: "outline", size: "sm" }))} href="/login">
 						Sign in
 					</Link>

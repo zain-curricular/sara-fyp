@@ -20,8 +20,8 @@ export default function ModelListingsShell({
 	variants,
 }: ModelListingsShellProps) {
 	return (
-		<div className="flex flex-col gap-6">
-			<div className="space-y-2">
+		<div container-id="model-listings-shell" className="flex flex-col gap-8">
+			<header container-id="model-listings-header" className="flex flex-col gap-3">
 				<CategoryBreadcrumbs
 					items={[
 						{ label: "Browse", href: "/browse" },
@@ -29,28 +29,31 @@ export default function ModelListingsShell({
 						{ label: model.name },
 					]}
 				/>
-				<h1 className="text-2xl font-semibold tracking-tight">{model.name}</h1>
-				<p className="text-sm text-muted-foreground">
-					{listings.length} listing{listings.length === 1 ? "" : "s"} found
-				</p>
-			</div>
+				<div className="flex flex-wrap items-end justify-between gap-3">
+					<h1 className="text-3xl font-semibold tracking-tight">{model.name}</h1>
+					<p className="text-sm text-muted-foreground tabular-nums">
+						{listings.length} listing{listings.length === 1 ? "" : "s"} found
+					</p>
+				</div>
+			</header>
 
 			{variants.length ? (
-				<div className="flex flex-wrap gap-2">
+				<div container-id="model-variants" className="flex flex-wrap gap-2">
 					{variants.map((variant, index) => (
 						<Badge key={`${variant.key}-${variant.value}-${index}`} variant="secondary">
-							{variant.key}: {variant.value}
+							<span className="font-medium">{variant.key}:</span>
+							<span className="ml-1">{variant.value}</span>
 						</Badge>
 					))}
 				</div>
 			) : null}
 
-			<div className="grid grid-cols-1 gap-3">
+			<div container-id="model-listings-grid" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 				{listings.map((listing) => (
 					<ListingSummaryCard key={listing.id} listing={listing} />
 				))}
 				{listings.length === 0 ? (
-					<Card size="sm">
+					<Card size="sm" className="sm:col-span-2">
 						<CardHeader>
 							<CardTitle className="text-base">No listings yet</CardTitle>
 						</CardHeader>

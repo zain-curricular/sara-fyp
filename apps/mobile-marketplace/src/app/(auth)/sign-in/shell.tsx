@@ -28,13 +28,16 @@ export default function SignInShell() {
 	});
 
 	return (
-		<div className="w-full max-w-sm space-y-6 rounded-xl border border-border bg-card p-6 shadow-sm">
-			<div className="space-y-1 text-center">
-				<h1 className="text-xl font-semibold">Sign in</h1>
+		<div
+			container-id="sign-in-card"
+			className="w-full max-w-sm space-y-6 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8"
+		>
+			<div container-id="sign-in-header" className="space-y-2 text-center">
+				<h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
 				<p className="text-sm text-muted-foreground">Use your email and password to continue.</p>
 			</div>
 			<form
-				className="space-y-4"
+				className="space-y-5"
 				onSubmit={form.handleSubmit(async ({ email, password }) => {
 					const supabase = createBrowserSupabaseClient();
 					const { error } = await supabase.auth.signInWithPassword({ email, password });

@@ -15,7 +15,10 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
 			: 0;
 
 	return (
-		<div className="w-full max-w-md space-y-8">
+		<div
+			container-id="onboarding-layout"
+			className="w-full max-w-md space-y-8 sm:max-w-lg"
+		>
 			<StepProgress currentStep={currentStep} labels={LABELS} />
 			{children}
 		</div>

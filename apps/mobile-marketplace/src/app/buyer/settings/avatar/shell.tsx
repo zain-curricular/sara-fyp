@@ -50,17 +50,20 @@ export default function AvatarSettingsShell({ profile }: { profile: OwnProfile }
 	}
 
 	return (
-		<div className="space-y-6">
-			<div>
-				<h1 className="text-2xl font-semibold tracking-tight">Avatar</h1>
+		<div container-id="avatar-settings-shell" className="flex max-w-2xl flex-col gap-8">
+			<header className="flex flex-col gap-1">
+				<h1 className="text-3xl font-semibold tracking-tight">Avatar</h1>
 				<p className="text-sm text-muted-foreground">Upload a new profile picture.</p>
-			</div>
-			<div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+			</header>
+			<div
+				container-id="avatar-settings-row"
+				className="flex flex-col items-center gap-6 rounded-2xl border border-border bg-card p-6 shadow-sm sm:flex-row sm:items-center sm:gap-8 sm:p-8"
+			>
 				<Avatar className="size-32 text-lg">
 					{profile.avatar_url ? <AvatarImage alt="" src={profile.avatar_url} /> : null}
 					<AvatarFallback>{initials}</AvatarFallback>
 				</Avatar>
-				<div className="flex flex-col gap-3">
+				<div className="flex flex-col items-center gap-3 sm:items-start">
 					<input
 						ref={inputRef}
 						accept="image/jpeg,image/png,image/webp,image/gif"

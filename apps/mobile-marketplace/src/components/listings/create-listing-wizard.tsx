@@ -102,23 +102,33 @@ export function CreateListingWizard({ categories }: CreateListingWizardProps) {
 	}
 
 	return (
-		<div className="flex flex-col gap-6">
-			<div className="flex gap-2 text-sm text-muted-foreground">
-				<span className={step >= 1 ? "text-foreground" : ""}>1. Details</span>
-				<span>→</span>
-				<span className={step >= 2 ? "text-foreground" : ""}>2. Photos</span>
-				<span>→</span>
-				<span className={step >= 3 ? "text-foreground" : ""}>3. Publish</span>
-			</div>
+		<div container-id="create-listing-wizard" className="flex flex-col gap-6">
+			<ol
+				container-id="create-listing-wizard-steps"
+				className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
+			>
+				<li className={step >= 1 ? "font-medium text-foreground" : ""}>1. Details</li>
+				<li aria-hidden>→</li>
+				<li className={step >= 2 ? "font-medium text-foreground" : ""}>2. Photos</li>
+				<li aria-hidden>→</li>
+				<li className={step >= 3 ? "font-medium text-foreground" : ""}>3. Publish</li>
+			</ol>
 
-			{error ? <p className="text-sm text-destructive">{error}</p> : null}
+			{error ? (
+				<p
+					role="alert"
+					className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+				>
+					{error}
+				</p>
+			) : null}
 
 			{step === 1 ? (
 				<Card size="sm">
 					<CardHeader>
 						<CardTitle className="text-base">Listing details</CardTitle>
 					</CardHeader>
-					<CardContent className="flex flex-col gap-4">
+					<CardContent className="flex flex-col gap-5">
 						<Field>
 							<FieldLabel>Category</FieldLabel>
 							<Select
@@ -127,7 +137,7 @@ export function CreateListingWizard({ categories }: CreateListingWizardProps) {
 									if (v) setCategoryId(v);
 								}}
 							>
-								<SelectTrigger>
+								<SelectTrigger className="w-full">
 									<SelectValue placeholder="Category" />
 								</SelectTrigger>
 								<SelectContent>
@@ -152,7 +162,7 @@ export function CreateListingWizard({ categories }: CreateListingWizardProps) {
 								rows={4}
 							/>
 						</Field>
-						<div className="grid grid-cols-2 gap-3">
+						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 							<Field>
 								<FieldLabel htmlFor="lst-price">Price</FieldLabel>
 								<Input
@@ -175,7 +185,7 @@ export function CreateListingWizard({ categories }: CreateListingWizardProps) {
 									if (v) setCondition(v as (typeof CONDITIONS)[number]);
 								}}
 							>
-								<SelectTrigger>
+								<SelectTrigger className="w-full">
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
@@ -187,7 +197,12 @@ export function CreateListingWizard({ categories }: CreateListingWizardProps) {
 								</SelectContent>
 							</Select>
 						</Field>
-						<Button type="button" disabled={busy} onClick={() => void submitBasics()}>
+						<Button
+							type="button"
+							className="w-full sm:w-fit sm:self-end"
+							disabled={busy}
+							onClick={() => void submitBasics()}
+						>
 							Continue
 						</Button>
 					</CardContent>
@@ -199,9 +214,9 @@ export function CreateListingWizard({ categories }: CreateListingWizardProps) {
 					<CardHeader>
 						<CardTitle className="text-base">Photos</CardTitle>
 					</CardHeader>
-					<CardContent className="flex flex-col gap-4">
+					<CardContent className="flex flex-col gap-5">
 						<ImageDropzone onFile={onUpload} disabled={busy} />
-						<div className="flex flex-wrap gap-2">
+						<div className="flex flex-wrap justify-end gap-2">
 							<Button type="button" variant="outline" onClick={() => setStep(3)} disabled={busy}>
 								Skip for now
 							</Button>
@@ -218,11 +233,17 @@ export function CreateListingWizard({ categories }: CreateListingWizardProps) {
 					<CardHeader>
 						<CardTitle className="text-base">Publish</CardTitle>
 					</CardHeader>
-					<CardContent className="flex flex-col gap-4">
+					<CardContent className="flex flex-col gap-5">
 						<p className="text-sm text-muted-foreground">
-							Publish your listing to make it visible to buyers. You can edit it later from My Listings.
+							Publish your listing to make it visible to buyers. You can edit it later from My
+							Listings.
 						</p>
-						<Button type="button" disabled={busy} onClick={() => void onPublish()}>
+						<Button
+							type="button"
+							className="w-full sm:w-fit sm:self-end"
+							disabled={busy}
+							onClick={() => void onPublish()}
+						>
 							Publish listing
 						</Button>
 					</CardContent>

@@ -19,7 +19,7 @@ export default function SellerPublicShell({ profile, reviewsInitial }: SellerPub
 	const [tab, setTab] = useState<"overview" | "reviews">("overview");
 
 	return (
-		<div className="flex flex-col gap-8">
+		<div container-id="seller-public-shell" className="flex flex-col gap-8">
 			<ProfileHeader profile={profile} />
 			<ProfileStats
 				stats={{
@@ -30,19 +30,29 @@ export default function SellerPublicShell({ profile, reviewsInitial }: SellerPub
 				}}
 			/>
 
-			<div className="flex flex-wrap gap-2 border-b border-border pb-2">
+			<div
+				container-id="seller-public-tabs"
+				role="tablist"
+				className="flex flex-wrap items-center gap-1 border-b border-border"
+			>
 				<Button
 					type="button"
+					role="tab"
+					aria-selected={tab === "overview"}
 					variant={tab === "overview" ? "secondary" : "ghost"}
 					size="sm"
+					className="-mb-px rounded-b-none"
 					onClick={() => setTab("overview")}
 				>
 					Overview
 				</Button>
 				<Button
 					type="button"
+					role="tab"
+					aria-selected={tab === "reviews"}
 					variant={tab === "reviews" ? "secondary" : "ghost"}
 					size="sm"
+					className="-mb-px rounded-b-none"
 					onClick={() => setTab("reviews")}
 				>
 					Reviews ({profile.total_reviews})
@@ -63,10 +73,10 @@ export default function SellerPublicShell({ profile, reviewsInitial }: SellerPub
 			) : null}
 
 			{tab === "reviews" ? (
-				<div className="flex flex-col gap-3">
+				<section container-id="seller-public-reviews" className="flex flex-col gap-4">
 					<h2 className="text-lg font-semibold tracking-tight">Seller reviews</h2>
 					<ReviewsList key={profile.id} sellerId={profile.id} initial={reviewsInitial} />
-				</div>
+				</section>
 			) : null}
 		</div>
 	);

@@ -84,20 +84,26 @@ export default function OnboardingProfileShell({ profile }: { profile: OwnProfil
 	}
 
 	return (
-		<div className="w-full max-w-xl space-y-8 rounded-xl border border-border bg-card p-6 shadow-sm">
-			<div className="space-y-1 text-center sm:text-left">
-				<h1 className="text-xl font-semibold">Finish your profile</h1>
+		<div
+			container-id="onboarding-profile-card"
+			className="w-full max-w-xl space-y-8 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8"
+		>
+			<div container-id="onboarding-profile-header" className="space-y-2 text-center sm:text-left">
+				<h1 className="text-2xl font-semibold tracking-tight">Finish your profile</h1>
 				<p className="text-sm text-muted-foreground">
 					This information is shown to other users on the marketplace.
 				</p>
 			</div>
 
-			<div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start">
+			<div
+				container-id="onboarding-profile-avatar"
+				className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-6"
+			>
 				<Avatar className="size-24 text-lg">
 					{profile.avatar_url ? <AvatarImage alt="" src={profile.avatar_url} /> : null}
 					<AvatarFallback>{initials}</AvatarFallback>
 				</Avatar>
-				<div className="flex flex-col gap-2">
+				<div className="flex flex-col items-center gap-2 sm:items-start">
 					<input
 						ref={fileRef}
 						accept="image/jpeg,image/png,image/webp,image/gif"

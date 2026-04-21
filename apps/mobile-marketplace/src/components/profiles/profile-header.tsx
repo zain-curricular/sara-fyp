@@ -18,14 +18,17 @@ export function ProfileHeader({ profile }: { profile: ProfileHeaderModel }) {
 		.toUpperCase();
 
 	return (
-		<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
-			<Avatar className="size-20">
+		<div
+			container-id="profile-header"
+			className="flex flex-col items-center gap-5 rounded-2xl border border-border bg-card p-6 text-center shadow-sm sm:flex-row sm:items-center sm:gap-6 sm:p-7 sm:text-left"
+		>
+			<Avatar className="size-24 sm:size-20">
 				{profile.avatar_url ? <AvatarImage src={profile.avatar_url} alt="" /> : null}
 				<AvatarFallback>{initials}</AvatarFallback>
 			</Avatar>
-			<div className="min-w-0 flex-1 space-y-1">
-				<div className="flex flex-wrap items-center gap-2">
-					<h1 className="truncate text-2xl font-semibold tracking-tight">
+			<div container-id="profile-header-meta" className="flex min-w-0 flex-1 flex-col gap-1.5">
+				<div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+					<h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl">
 						{profile.display_name ?? "Unnamed seller"}
 					</h1>
 					{profile.is_verified ? <Badge variant="secondary">Verified</Badge> : null}
@@ -33,7 +36,9 @@ export function ProfileHeader({ profile }: { profile: ProfileHeaderModel }) {
 						{profile.role}
 					</Badge>
 				</div>
-				{profile.handle ? <p className="text-sm text-muted-foreground">@{profile.handle}</p> : null}
+				{profile.handle ? (
+					<p className="text-sm text-muted-foreground">@{profile.handle}</p>
+				) : null}
 			</div>
 		</div>
 	);

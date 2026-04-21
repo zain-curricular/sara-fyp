@@ -23,9 +23,12 @@ export default function OnboardingVerifyShell({ phone }: { phone: string }) {
 	});
 
 	return (
-		<div className="w-full max-w-sm space-y-6 rounded-xl border border-border bg-card p-6 shadow-sm">
-			<div className="space-y-1 text-center">
-				<h1 className="text-xl font-semibold">Enter the code</h1>
+		<div
+			container-id="onboarding-verify-card"
+			className="w-full max-w-sm space-y-6 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8"
+		>
+			<div container-id="onboarding-verify-header" className="space-y-2 text-center">
+				<h1 className="text-2xl font-semibold tracking-tight">Enter the code</h1>
 				<p className="text-sm text-muted-foreground">We sent a 6-digit code to your phone.</p>
 			</div>
 			<form

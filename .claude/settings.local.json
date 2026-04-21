@@ -162,7 +162,8 @@
       "Bash(sed -i \"s|@/lib/features/product-catalog/dataAccess|@/lib/features/product-catalog/_data-access/catalogDafs|g\" src/lib/features/product-catalog/__tests__/unit/publicCatalog.test.ts)",
       "Bash(sed -i \"s|@/lib/features/profiles/dataAccess|@/lib/features/profiles/_data-access/profilesDafs|g\" src/lib/features/profiles/__tests__/unit/getProfile.test.ts)",
       "Bash(sed -n '80,95p' src/lib/features/listings/core/_data-access/listingsDafs.integration.test.ts)",
-      "Bash(sed -n '68,80p' src/lib/features/listings/images/_data-access/listingImagesDafs.integration.test.ts)"
+      "Bash(sed -n '68,80p' src/lib/features/listings/images/_data-access/listingImagesDafs.integration.test.ts)",
+      "mcp__clickup__clickup_filter_tasks"
     ]
   },
   "enableAllProjectMcpServers": true,

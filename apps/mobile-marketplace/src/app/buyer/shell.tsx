@@ -7,28 +7,36 @@ import { cn } from "@/lib/utils";
 
 export default function BuyerShell() {
 	return (
-		<div className="space-y-6">
-			<div className="space-y-2">
-				<h1 className="text-2xl font-semibold tracking-tight">Buyer</h1>
-				<p className="text-muted-foreground">Saved listings and account shortcuts.</p>
-			</div>
-			<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-				<Link className={cn(buttonVariants(), "w-fit")} href="/buyer/favorites">
+		<div container-id="buyer-shell" className="flex flex-col gap-8">
+			<header container-id="buyer-header" className="flex flex-col gap-2">
+				<p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+					Buyer dashboard
+				</p>
+				<h1 className="text-3xl font-semibold tracking-tight">Buyer</h1>
+				<p className="text-sm text-muted-foreground">
+					Saved listings and account shortcuts.
+				</p>
+			</header>
+
+			<div container-id="buyer-actions" className="flex flex-wrap gap-3">
+				<Link className={cn(buttonVariants())} href="/buyer/favorites">
 					Favorites
 				</Link>
-				<Link className={cn(buttonVariants({ variant: "outline" }), "w-fit")} href="/buyer/viewed">
+				<Link className={cn(buttonVariants({ variant: "outline" }))} href="/buyer/viewed">
 					Recently viewed
 				</Link>
-				<p className="text-xs text-muted-foreground">
-					When an order is completed, open your review link from order details (path: buyer → orders → review).
-				</p>
 				<Link
-					className={cn(buttonVariants({ variant: "outline" }), "w-fit")}
+					className={cn(buttonVariants({ variant: "outline" }))}
 					href="/buyer/settings/profile"
 				>
 					Settings
 				</Link>
 			</div>
+
+			<p container-id="buyer-help" className="text-xs text-muted-foreground">
+				When an order is completed, open your review link from order details (buyer → orders →
+				review).
+			</p>
 		</div>
 	);
 }

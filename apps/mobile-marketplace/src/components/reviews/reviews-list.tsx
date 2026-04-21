@@ -22,17 +22,16 @@ export function ReviewsList({
 	}
 
 	return (
-		<div className="flex flex-col gap-3">
+		<div container-id="reviews-list" className="flex flex-col gap-4">
 			{items.map((review) => (
 				<ReviewCard key={review.id} review={review} />
 			))}
 			{hasMore ? (
-				<div className="flex flex-col gap-2">
+				<div container-id="reviews-load-more" className="flex flex-col items-center gap-2 pt-2">
 					<Button
 						type="button"
 						variant="outline"
 						size="sm"
-						className="w-fit"
 						disabled={loading}
 						onClick={() => void loadMore()}
 					>

@@ -74,7 +74,8 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
 
 	return (
 		<form
-			className="flex max-w-lg flex-col gap-6"
+			className="flex w-full flex-col gap-6"
+			container-id="review-form"
 			aria-label="Submit review"
 			onSubmit={(e) => void onSubmit(e)}
 		>
@@ -110,7 +111,7 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
 					rows={5}
 				/>
 			</Field>
-			<Button type="submit" disabled={isPending || rating < 1}>
+			<Button type="submit" disabled={isPending || rating < 1} className="w-full sm:w-fit">
 				{isPending ? "Submitting…" : "Submit review"}
 			</Button>
 		</form>

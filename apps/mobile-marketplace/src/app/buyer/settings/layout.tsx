@@ -6,12 +6,19 @@ const linkClass = "text-sm font-medium text-muted-foreground hover:text-foregrou
 
 export default function BuyerSettingsLayout({ children }: { children: React.ReactNode }) {
 	return (
-		<div className="flex flex-col gap-8 lg:flex-row">
-			<nav aria-label="Settings" className="lg:w-52 lg:shrink-0">
-				<p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+		<div
+			container-id="buyer-settings-layout"
+			className="flex flex-col gap-8 lg:grid lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start lg:gap-12"
+		>
+			<nav
+				aria-label="Settings"
+				container-id="buyer-settings-nav"
+				className="lg:sticky lg:top-24"
+			>
+				<p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
 					Settings
 				</p>
-				<ul className="flex flex-col gap-2">
+				<ul className="flex flex-col gap-2.5">
 					<li>
 						<Link className={linkClass} href="/buyer/settings/profile">
 							Profile
@@ -23,9 +30,11 @@ export default function BuyerSettingsLayout({ children }: { children: React.Reac
 						</Link>
 					</li>
 				</ul>
-				<Separator className="my-4 lg:hidden" />
+				<Separator className="mt-4 lg:hidden" />
 			</nav>
-			<div className="min-w-0 flex-1">{children}</div>
+			<div container-id="buyer-settings-main" className="min-w-0">
+				{children}
+			</div>
 		</div>
 	);
 }

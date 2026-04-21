@@ -12,10 +12,13 @@ type ModelCardProps = {
 
 export function ModelCard({ model, href, className }: ModelCardProps) {
 	return (
-		<Link href={href} className="block">
+		<Link href={href} className="group block focus:outline-none">
 			<Card
 				size="sm"
-				className={cn("cursor-pointer transition-colors hover:bg-accent/40", className)}
+				className={cn(
+					"h-full cursor-pointer transition-all group-hover:border-foreground/20 group-hover:bg-accent/40 group-hover:shadow-sm group-focus-visible:ring-2 group-focus-visible:ring-ring",
+					className,
+				)}
 			>
 				<CardHeader>
 					<CardTitle className="text-base">{model.name}</CardTitle>

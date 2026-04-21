@@ -52,11 +52,11 @@ export function SearchFiltersSidebar({ initial, basePath = "/search" }: SearchFi
 	}
 
 	return (
-		<Card size="sm">
+		<Card size="sm" container-id="search-filters-card">
 			<CardHeader>
 				<CardTitle className="text-base">Filters</CardTitle>
 			</CardHeader>
-			<CardContent className="flex flex-col gap-4">
+			<CardContent className="flex flex-col gap-5">
 				<Field>
 					<FieldLabel htmlFor="search-q">Keyword</FieldLabel>
 					<Input
@@ -75,7 +75,7 @@ export function SearchFiltersSidebar({ initial, basePath = "/search" }: SearchFi
 						placeholder="City"
 					/>
 				</Field>
-				<div className="grid grid-cols-2 gap-2">
+				<div container-id="search-filters-price" className="grid grid-cols-2 gap-3">
 					<Field>
 						<FieldLabel htmlFor="search-pmin">Min price</FieldLabel>
 						<Input
@@ -97,8 +97,8 @@ export function SearchFiltersSidebar({ initial, basePath = "/search" }: SearchFi
 						/>
 					</Field>
 				</div>
-				<Button type="button" onClick={apply}>
-					Apply
+				<Button type="button" onClick={apply} className="w-full">
+					Apply filters
 				</Button>
 			</CardContent>
 		</Card>

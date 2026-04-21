@@ -25,18 +25,21 @@ export function ListingSpecsTable({ listing }: ListingSpecsTableProps) {
 	}
 
 	return (
-		<Card size="sm">
+		<Card size="sm" container-id="listing-specs-card">
 			<CardHeader>
 				<CardTitle className="text-base">Specs</CardTitle>
 			</CardHeader>
 			<CardContent>
-				<dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+				<dl
+					container-id="listing-specs-grid"
+					className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2"
+				>
 					{entries.map(([key, value]) => (
-						<div key={key} className="flex flex-col gap-0.5">
-							<dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+						<div key={key} className="flex flex-col gap-1 border-b border-border pb-3 last:border-b-0 last:pb-0">
+							<dt className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
 								{key.replace(/_/g, " ")}
 							</dt>
-							<dd className="text-sm">{String(value)}</dd>
+							<dd className="text-sm font-medium">{String(value)}</dd>
 						</div>
 					))}
 				</dl>

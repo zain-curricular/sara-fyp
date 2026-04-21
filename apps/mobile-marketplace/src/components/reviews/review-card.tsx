@@ -18,14 +18,16 @@ function formatDate(iso: string): string {
 
 export function ReviewCard({ review }: ReviewCardProps) {
 	return (
-		<Card size="sm">
-			<CardContent className="flex flex-col gap-2 pt-4">
+		<Card size="sm" container-id="review-card">
+			<CardContent className="flex flex-col gap-3 pt-4">
 				<div className="flex flex-wrap items-center justify-between gap-2">
 					<ReviewStars value={review.rating} readOnly />
-					<span className="text-xs text-muted-foreground">{formatDate(review.created_at)}</span>
+					<span className="text-xs text-muted-foreground tabular-nums">
+						{formatDate(review.created_at)}
+					</span>
 				</div>
 				{review.comment ? (
-					<p className="text-sm text-muted-foreground">{review.comment}</p>
+					<p className="text-sm leading-relaxed text-muted-foreground">{review.comment}</p>
 				) : (
 					<p className="text-sm italic text-muted-foreground">No written feedback.</p>
 				)}
