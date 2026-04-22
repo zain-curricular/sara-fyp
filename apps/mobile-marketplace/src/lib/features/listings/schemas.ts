@@ -12,6 +12,9 @@ export const listingsSearchParamsSchema = z
 		price_max: z.coerce.number().positive().optional(),
 		page: z.coerce.number().int().min(1).max(100).optional(),
 		limit: z.coerce.number().int().min(1).max(50).optional(),
+		condition: z.enum(["new", "like_new", "excellent", "good", "fair", "poor"]).optional(),
+		sale_type: z.enum(["fixed", "auction", "both"]).optional(),
+		sort: z.enum(["newest", "price_asc", "price_desc"]).optional(),
 	})
 	.strict();
 

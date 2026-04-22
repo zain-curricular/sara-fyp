@@ -1,3 +1,14 @@
+// ============================================================================
+// Onboarding — Profile Shell
+// ============================================================================
+//
+// Step 3 of 3: complete the user's profile. Shows avatar upload (optional),
+// then a form for display name, city, handle, and locale. Phone is read-only
+// (pre-filled from the verified number). Submits via useCompleteOnboarding().
+//
+// Avatar: triggers a hidden file input → uploadProfileAvatar → router.refresh().
+// The step indicator is rendered by the parent onboarding layout.
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,22 +37,32 @@ import {
 	SelectValue,
 } from "@/components/primitives/select";
 import { Separator } from "@/components/primitives/separator";
+import { ApiError } from "@/lib/api/client";
 import { useCompleteOnboarding } from "@/lib/features/onboarding/hooks";
 import { completeOnboardingSchema } from "@/lib/features/onboarding/schemas";
-import { ApiError } from "@/lib/api/client";
 import type { OwnProfile } from "@/lib/features/profiles/types";
 import { uploadProfileAvatar } from "@/lib/features/profiles/upload-avatar";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
-type FormValues = z.input<typeof completeOnboardingSchema>;
+// z.preprocess makes the input type `unknown`; thread input/output separately so
+// the resolver generic matches useForm's three-parameter signature.
+type FormInput = z.input<typeof completeOnboardingSchema>;
+type FormOutput = z.infer<typeof completeOnboardingSchema>;
 
-export default function OnboardingProfileShell({ profile }: { profile: OwnProfile }) {
+/** Onboarding step 3: avatar + profile details form. */
+export default function OnboardingProfileShell({
+	profile,
+	emailVerified,
+}: {
+	profile: OwnProfile;
+	emailVerified: boolean;
+}) {
 	const router = useRouter();
 	const complete = useCompleteOnboarding();
 	const fileRef = useRef<HTMLInputElement>(null);
 	const [avatarBusy, setAvatarBusy] = useState(false);
 
-	const form = useForm<FormValues>({
+	const form = useForm<FormInput, unknown, FormOutput>({
 		resolver: zodResolver(completeOnboardingSchema),
 		defaultValues: {
 			display_name: profile.display_name ?? "",
@@ -63,9 +84,7 @@ export default function OnboardingProfileShell({ profile }: { profile: OwnProfil
 		setAvatarBusy(true);
 		try {
 			const supabase = createBrowserSupabaseClient();
-			const {
-				data: { session },
-			} = await supabase.auth.getSession();
+			const { data: { session } } = await supabase.auth.getSession();
 			await uploadProfileAvatar(session?.access_token, file);
 			router.refresh();
 			toast.success("Photo updated");
@@ -77,9 +96,7 @@ export default function OnboardingProfileShell({ profile }: { profile: OwnProfil
 			toast.error(e instanceof Error ? e.message : "Upload failed");
 		} finally {
 			setAvatarBusy(false);
-			if (fileRef.current) {
-				fileRef.current.value = "";
-			}
+			if (fileRef.current) fileRef.current.value = "";
 		}
 	}
 
@@ -88,22 +105,25 @@ export default function OnboardingProfileShell({ profile }: { profile: OwnProfil
 			container-id="onboarding-profile-card"
 			className="w-full max-w-xl space-y-8 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8"
 		>
-			<div container-id="onboarding-profile-header" className="space-y-2 text-center sm:text-left">
-				<h1 className="text-2xl font-semibold tracking-tight">Finish your profile</h1>
+
+			{/* Heading */}
+			<div container-id="onboarding-profile-header" className="space-y-1">
+				<h1 className="text-xl font-bold tracking-tight">Finish your profile</h1>
 				<p className="text-sm text-muted-foreground">
-					This information is shown to other users on the marketplace.
+					Visible to other users — helps build trust with buyers and sellers.
 				</p>
 			</div>
 
+			{/* Avatar upload */}
 			<div
 				container-id="onboarding-profile-avatar"
-				className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-6"
+				className="flex items-center gap-5"
 			>
-				<Avatar className="size-24 text-lg">
+				<Avatar className="size-20 shrink-0 text-lg">
 					{profile.avatar_url ? <AvatarImage alt="" src={profile.avatar_url} /> : null}
 					<AvatarFallback>{initials}</AvatarFallback>
 				</Avatar>
-				<div className="flex flex-col items-center gap-2 sm:items-start">
+				<div className="flex flex-col gap-2">
 					<input
 						ref={fileRef}
 						accept="image/jpeg,image/png,image/webp,image/gif"
@@ -111,78 +131,96 @@ export default function OnboardingProfileShell({ profile }: { profile: OwnProfil
 						type="file"
 						onChange={(ev) => {
 							const file = ev.target.files?.[0];
-							if (file) {
-								void onAvatarFile(file);
-							}
+							if (file) void onAvatarFile(file);
 						}}
 					/>
 					<Button
 						disabled={avatarBusy}
 						type="button"
 						variant="outline"
+						size="sm"
 						onClick={() => fileRef.current?.click()}
 					>
 						{avatarBusy ? "Uploading…" : "Upload photo"}
 					</Button>
-					<p className="text-xs text-muted-foreground">Optional — JPEG, PNG, WebP, or GIF.</p>
+					<p className="text-xs text-muted-foreground">Optional · JPEG, PNG, WebP or GIF</p>
 				</div>
 			</div>
 
+			<Separator />
+
+			{/* Profile form */}
 			<form
-				className="space-y-6"
+				container-id="onboarding-profile-form"
+				className="space-y-5"
 				onSubmit={form.handleSubmit((values) => {
 					complete.mutate(completeOnboardingSchema.parse(values));
 				})}
 			>
 				<FieldSet>
 					<FieldGroup>
+
 						<div className="flex flex-col gap-1">
-							<h2 className="text-xs font-medium text-muted-foreground">Details</h2>
+							<h2 className="text-xs font-medium text-muted-foreground">Your details</h2>
 							<Separator />
 						</div>
+
 						<Field data-invalid={!!form.formState.errors.display_name}>
 							<FieldLabel htmlFor="display_name">Display name</FieldLabel>
-							<Input id="display_name" {...form.register("display_name")} />
+							<Input id="display_name" placeholder="Your name" {...form.register("display_name")} />
 							<FieldError errors={[form.formState.errors.display_name]} />
 						</Field>
+
 						<Field data-invalid={!!form.formState.errors.phone_number}>
 							<FieldLabel htmlFor="phone_number">Phone</FieldLabel>
-							<FieldDescription>Must match your verified number.</FieldDescription>
+							{profile.phone_verified ? (
+								<FieldDescription>Pre-filled from your verified number.</FieldDescription>
+							) : emailVerified ? (
+								<FieldDescription>
+									Optional — your email is verified. Use international format (e.g. +923001234567) or
+									leave blank.
+								</FieldDescription>
+							) : (
+								<FieldDescription>Verify your number on the previous steps first.</FieldDescription>
+							)}
 							<Input
-								readOnly
-								className="bg-muted"
+								readOnly={profile.phone_verified}
+								className={profile.phone_verified ? "bg-muted" : undefined}
 								id="phone_number"
+								placeholder={emailVerified && !profile.phone_verified ? "+923001234567" : undefined}
 								{...form.register("phone_number")}
 							/>
 							<FieldError errors={[form.formState.errors.phone_number]} />
 						</Field>
-						<Field data-invalid={!!form.formState.errors.city}>
-							<FieldLabel htmlFor="city">City</FieldLabel>
-							<Input id="city" {...form.register("city")} />
-							<FieldError errors={[form.formState.errors.city]} />
-						</Field>
-						<Field data-invalid={!!form.formState.errors.handle}>
-							<FieldLabel htmlFor="handle">Handle</FieldLabel>
-							<FieldDescription>
-								Lowercase letters, numbers, underscore (3–30). Optional.
-							</FieldDescription>
-							<Input
-								autoComplete="username"
-								id="handle"
-								placeholder="your_handle"
-								{...form.register("handle")}
-							/>
-							<FieldError errors={[form.formState.errors.handle]} />
-						</Field>
+
+						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+							<Field data-invalid={!!form.formState.errors.city}>
+								<FieldLabel htmlFor="city">City</FieldLabel>
+								<Input id="city" placeholder="e.g. Karachi" {...form.register("city")} />
+								<FieldError errors={[form.formState.errors.city]} />
+							</Field>
+							<Field data-invalid={!!form.formState.errors.handle}>
+								<FieldLabel htmlFor="handle">Handle</FieldLabel>
+								<FieldDescription>Lowercase, 3–30 chars. Optional.</FieldDescription>
+								<Input
+									autoComplete="username"
+									id="handle"
+									placeholder="your_handle"
+									{...form.register("handle")}
+								/>
+								<FieldError errors={[form.formState.errors.handle]} />
+							</Field>
+						</div>
+
 						<Field data-invalid={!!form.formState.errors.locale}>
-							<FieldLabel htmlFor="locale">Locale</FieldLabel>
+							<FieldLabel htmlFor="locale">Preferred language</FieldLabel>
 							<Controller
 								control={form.control}
 								name="locale"
 								render={({ field }) => (
 									<Select value={field.value ?? "en"} onValueChange={(v) => field.onChange(v)}>
 										<SelectTrigger className="w-full min-w-0" id="locale">
-											<SelectValue placeholder="Locale" />
+											<SelectValue placeholder="Language" />
 										</SelectTrigger>
 										<SelectContent>
 											<SelectItem value="en">English</SelectItem>
@@ -193,10 +231,12 @@ export default function OnboardingProfileShell({ profile }: { profile: OwnProfil
 							/>
 							<FieldError errors={[form.formState.errors.locale]} />
 						</Field>
+
 					</FieldGroup>
 				</FieldSet>
-				<Button className="w-full sm:w-auto" disabled={complete.isPending} type="submit">
-					{complete.isPending ? "Saving…" : "Complete setup"}
+
+				<Button disabled={complete.isPending} type="submit">
+					{complete.isPending ? "Saving…" : "Complete setup →"}
 				</Button>
 			</form>
 		</div>

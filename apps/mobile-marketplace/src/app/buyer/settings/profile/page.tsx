@@ -6,8 +6,11 @@ import ProfileSettingsShell from "./shell";
 
 export default async function BuyerProfileSettingsPage() {
 	const profile = await fetchMyProfile();
-	if (!profile) {
+	if (profile === null) {
 		redirect("/login");
+	}
+	if (profile === "no_profile") {
+		redirect("/onboarding/phone");
 	}
 
 	return <ProfileSettingsShell profile={profile} />;

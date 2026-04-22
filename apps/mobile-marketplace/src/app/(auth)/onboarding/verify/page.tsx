@@ -9,8 +9,11 @@ type Props = { searchParams: Promise<{ phone?: string }> };
 
 export default async function OnboardingVerifyPage({ searchParams }: Props) {
 	const profile = await fetchMyProfile();
-	if (!profile) {
+	if (profile === null) {
 		redirect("/sign-in");
+	}
+	if (profile === "no_profile") {
+		redirect("/onboarding/phone");
 	}
 	if (profile.onboarding_completed_at) {
 		redirect("/buyer");

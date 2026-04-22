@@ -1,18 +1,23 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Geist_Mono } from "next/font/google";
 
 import { AppProviders } from "@/lib/providers/app-providers";
 
 import "./globals.css";
 
-const geistSans = Geist({
-	variable: "--font-geist-sans",
+// Inter — humanist sans-serif matching Amazon Ember's neutral, mature character.
+// Variable name "--font-sans" wires directly into the @theme token in globals.css.
+const fontSans = Inter({
+	variable: "--font-sans",
 	subsets: ["latin"],
+	display: "swap",
+	weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
+const fontMono = Geist_Mono({
 	variable: "--font-geist-mono",
 	subsets: ["latin"],
+	display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -28,7 +33,7 @@ export default function RootLayout({
 	return (
 		<html
 			lang="en"
-			className={`${geistSans.variable} ${geistMono.variable} h-full`}
+			className={`${fontSans.variable} ${fontMono.variable} h-full`}
 			suppressHydrationWarning
 		>
 			<body className="min-h-full flex flex-col bg-background font-sans text-foreground antialiased">

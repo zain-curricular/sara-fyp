@@ -75,7 +75,26 @@ export async function searchListingsPublic(
 		q = q.ilike("title", pat);
 	}
 
-	const { data, error, count } = await q.order("created_at", { ascending: false }).range(offset, to);
+	if (params.condition) {
+		q = q.eq("condition", params.condition);
+	}
+	// "fixed" filter also includes "both" listings (buy-now available); same for "auction"
+	if (params.sale_type === "fixed") {
+		q = q.or("sale_type.eq.fixed,sale_type.eq.both");
+	} else if (params.sale_type === "auction") {
+		q = q.or("sale_type.eq.auction,sale_type.eq.both");
+	}
+
+	const sort = params.sort ?? "newest";
+	if (sort === "price_asc") {
+		q = q.order("price", { ascending: true });
+	} else if (sort === "price_desc") {
+		q = q.order("price", { ascending: false });
+	} else {
+		q = q.order("created_at", { ascending: false });
+	}
+
+	const { data, error, count } = await q.range(offset, to);
 
 	const total = count ?? 0;
 	return {

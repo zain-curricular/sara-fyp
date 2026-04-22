@@ -1,15 +1,18 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError, apiFetch, apiFetchFormData } from "./client";
 
 describe("apiFetch", () => {
+	beforeEach(() => {
+		vi.stubGlobal("window", undefined);
+	});
 	afterEach(() => {
 		vi.unstubAllGlobals();
 		delete process.env.NEXT_PUBLIC_API_URL;
 	});
 
-	it("throws when NEXT_PUBLIC_API_URL is unset", async () => {
-		await expect(apiFetch("/x")).rejects.toThrow(/NEXT_PUBLIC_API_URL is not set/);
+	it("throws when API base URL is unset", async () => {
+		await expect(apiFetch("/x")).rejects.toThrow(/Marketplace API base URL is not configured/);
 	});
 
 	it("requests the backend base URL", async () => {
@@ -49,14 +52,17 @@ describe("apiFetch", () => {
 });
 
 describe("apiFetchFormData", () => {
+	beforeEach(() => {
+		vi.stubGlobal("window", undefined);
+	});
 	afterEach(() => {
 		vi.unstubAllGlobals();
 		delete process.env.NEXT_PUBLIC_API_URL;
 	});
 
-	it("throws when NEXT_PUBLIC_API_URL is unset", async () => {
+	it("throws when API base URL is unset", async () => {
 		const fd = new FormData();
-		await expect(apiFetchFormData("/x", fd)).rejects.toThrow(/NEXT_PUBLIC_API_URL is not set/);
+		await expect(apiFetchFormData("/x", fd)).rejects.toThrow(/Marketplace API base URL is not configured/);
 	});
 
 	it("POSTs FormData without setting Content-Type (boundary preserved)", async () => {

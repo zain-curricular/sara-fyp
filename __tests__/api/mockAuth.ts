@@ -18,9 +18,15 @@ export const mockAuthenticateFromRequest = vi.mocked(authenticateFromRequest)
 /**
  * Resolves auth as the given user id (matches `authenticateFromRequest` success shape).
  */
-export function mockAuthenticatedUser(userId: string): void {
+export function mockAuthenticatedUser(
+	userId: string,
+	options?: { emailVerified?: boolean },
+): void {
 	mockAuthenticateFromRequest.mockResolvedValue({
-		user: { id: userId },
+		user: {
+			id: userId,
+			email_confirmed_at: options?.emailVerified ? new Date().toISOString() : null,
+		},
 		error: null,
 	})
 }

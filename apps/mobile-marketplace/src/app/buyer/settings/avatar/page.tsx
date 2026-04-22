@@ -6,8 +6,11 @@ import AvatarSettingsShell from "./shell";
 
 export default async function BuyerAvatarSettingsPage() {
 	const profile = await fetchMyProfile();
-	if (!profile) {
+	if (profile === null) {
 		redirect("/login");
+	}
+	if (profile === "no_profile") {
+		redirect("/onboarding/phone");
 	}
 
 	return <AvatarSettingsShell profile={profile} />;

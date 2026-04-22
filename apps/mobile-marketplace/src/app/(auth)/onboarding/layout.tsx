@@ -17,10 +17,12 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
 	return (
 		<div
 			container-id="onboarding-layout"
-			className="w-full max-w-md space-y-8 sm:max-w-lg"
+			className="mx-auto flex w-full max-w-md flex-col items-center space-y-8 sm:max-w-lg"
 		>
-			<StepProgress currentStep={currentStep} labels={LABELS} />
-			{children}
+			<div className="w-full">
+				<StepProgress currentStep={currentStep} labels={LABELS} />
+			</div>
+			<div className="flex w-full flex-col items-center">{children}</div>
 		</div>
 	);
 }

@@ -1,9 +1,25 @@
+import { getMarketplaceApiBaseUrl } from "@/lib/api/base-url";
+
 function getApiBaseUrl(): string {
-	const raw = process.env.NEXT_PUBLIC_API_URL;
-	if (!raw) {
-		return "";
+	return getMarketplaceApiBaseUrl();
+}
+
+const API_UPSTREAM_HINT =
+	"The marketplace API is not reachable. In a separate terminal, from the repo root run `npm run dev` so the main app listens on the port in `NEXT_PUBLIC_API_URL` (default http://localhost:3000). If the main app uses another port, set `NEXT_PUBLIC_API_URL` to match.";
+
+function isProbablyFailedProxyResponse(status: number, body: unknown): boolean {
+	if (status !== 500 && status !== 502 && status !== 503) return false;
+	if (typeof body !== "string") return false;
+	return body === "Internal Server Error" || body.includes("Internal Server Error");
+}
+
+async function fetchOrExplain(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+	try {
+		return await fetch(input, init);
+	} catch (e) {
+		const msg = e instanceof Error ? e.message : String(e);
+		throw new Error(`${API_UPSTREAM_HINT} (${msg})`);
 	}
-	return raw.replace(/\/$/, "");
 }
 
 export class ApiError extends Error {
@@ -25,13 +41,14 @@ type ApiFetchOptions = RequestInit & {
  * Typed JSON fetch against the shared marketplace API (`NEXT_PUBLIC_API_URL`).
  * Pass `accessToken` when calling from the client with a Supabase session JWT.
  *
- * @throws Error if `NEXT_PUBLIC_API_URL` is unset (avoids accidental same-origin `fetch`).
+ * @throws Error if the API base URL is empty (`NEXT_PUBLIC_API_URL` unset and not in `development` default).
  */
 export async function apiFetch<T>(path: string, init: ApiFetchOptions = {}): Promise<T> {
 	const base = getApiBaseUrl();
-	if (!base) {
+	// Server (RSC): need upstream URL. Browser: "" uses same-origin `/api/*` → proxy route.
+	if (!base && typeof window === "undefined") {
 		throw new Error(
-			"NEXT_PUBLIC_API_URL is not set — cannot call the marketplace API (refusing same-origin relative fetch).",
+			"Marketplace API base URL is not configured — set NEXT_PUBLIC_API_URL to the repo-root app URL (see `src/app/api`).",
 		);
 	}
 
@@ -47,7 +64,7 @@ export async function apiFetch<T>(path: string, init: ApiFetchOptions = {}): Pro
 		headers.set("Accept", "application/json");
 	}
 
-	const response = await fetch(url, { ...rest, headers });
+	const response = await fetchOrExplain(url, { ...rest, headers });
 
 	if (!response.ok) {
 		let body: unknown;
@@ -56,6 +73,9 @@ export async function apiFetch<T>(path: string, init: ApiFetchOptions = {}): Pro
 			body = text ? JSON.parse(text) : undefined;
 		} catch {
 			body = text;
+		}
+		if (isProbablyFailedProxyResponse(response.status, body)) {
+			throw new Error(API_UPSTREAM_HINT);
 		}
 		throw new ApiError(response.statusText || "Request failed", response.status, body);
 	}
@@ -81,9 +101,9 @@ export async function apiFetchFormData<T>(
 	init: ApiFormFetchOptions = {},
 ): Promise<T> {
 	const base = getApiBaseUrl();
-	if (!base) {
+	if (!base && typeof window === "undefined") {
 		throw new Error(
-			"NEXT_PUBLIC_API_URL is not set — cannot call the marketplace API (refusing same-origin relative fetch).",
+			"Marketplace API base URL is not configured — set NEXT_PUBLIC_API_URL to the repo-root app URL (see `src/app/api`).",
 		);
 	}
 
@@ -99,7 +119,7 @@ export async function apiFetchFormData<T>(
 		headers.set("Accept", "application/json");
 	}
 
-	const response = await fetch(url, {
+	const response = await fetchOrExplain(url, {
 		...rest,
 		method: init.method ?? "POST",
 		body: formData,
@@ -113,6 +133,9 @@ export async function apiFetchFormData<T>(
 			body = text ? JSON.parse(text) : undefined;
 		} catch {
 			body = text;
+		}
+		if (isProbablyFailedProxyResponse(response.status, body)) {
+			throw new Error(API_UPSTREAM_HINT);
 		}
 		throw new ApiError(response.statusText || "Request failed", response.status, body);
 	}

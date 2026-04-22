@@ -37,6 +37,10 @@ describe("getPostSignInRedirectPath", () => {
 		expect(getPostSignInRedirectPath(null)).toBe("/sign-in");
 	});
 
+	it("sends new user (no profile row) to phone onboarding", () => {
+		expect(getPostSignInRedirectPath("no_profile")).toBe("/onboarding/phone");
+	});
+
 	it("sends completed onboarding to buyer", () => {
 		expect(
 			getPostSignInRedirectPath(
@@ -48,10 +52,16 @@ describe("getPostSignInRedirectPath", () => {
 		).toBe("/buyer");
 	});
 
-	it("sends unverified phone to phone step", () => {
+	it("sends unverified phone to phone step when email is not verified", () => {
 		expect(getPostSignInRedirectPath(baseProfile({ phone_verified: false }))).toBe(
 			"/onboarding/phone",
 		);
+	});
+
+	it("skips phone step when email is verified but phone is not", () => {
+		expect(
+			getPostSignInRedirectPath(baseProfile({ phone_verified: false }), { emailVerified: true }),
+		).toBe("/onboarding/profile");
 	});
 
 	it("sends verified phone but incomplete onboarding to profile step", () => {

@@ -26,6 +26,14 @@ export async function POST(request: Request) {
 			return validation.error
 		}
 
+		const emailVerified = Boolean(auth.user.email_confirmed_at)
+		if (!validation.data.phone_number && !emailVerified) {
+			return NextResponse.json(
+				{ ok: false, error: 'Phone number is required unless your email is verified' },
+				{ status: 400 },
+			)
+		}
+
 		const { data, error } = await completeOnboarding(auth.user.id, validation.data)
 		if (error) {
 			const msg = error instanceof Error ? error.message : String(error)

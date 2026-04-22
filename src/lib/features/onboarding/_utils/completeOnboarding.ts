@@ -28,7 +28,11 @@ export async function completeOnboarding(
 		return { data: null, error: new Error('NOT_FOUND') }
 	}
 
-	if (profile.phone_verified && profile.phone_number !== input.phone_number) {
+	if (
+		input.phone_number !== undefined &&
+		profile.phone_verified &&
+		profile.phone_number !== input.phone_number
+	) {
 		return { data: null, error: new Error('VERIFIED_PHONE_MISMATCH') }
 	}
 
@@ -54,7 +58,7 @@ export async function completeOnboarding(
 
 	return updateProfile(userId, {
 		display_name: input.display_name,
-		phone_number: input.phone_number,
+		...(input.phone_number !== undefined ? { phone_number: input.phone_number } : {}),
 		city: input.city,
 		locale: input.locale ?? 'en',
 		onboarding_completed_at: new Date().toISOString(),

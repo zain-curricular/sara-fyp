@@ -185,10 +185,6 @@ export function useUploadImages() {
 		} = await supabase.auth.getSession();
 		const form = new FormData();
 		form.set("file", file);
-		const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
-		if (!base) {
-			throw new Error("NEXT_PUBLIC_API_URL is not set");
-		}
 		return apiFetchFormData<{ ok: true; data: unknown }>(`/api/listings/${encodeURIComponent(listingId)}/images`, form, {
 			accessToken: session?.access_token,
 		});

@@ -25,8 +25,11 @@ function anonClient() {
 	})
 }
 
-/** Successful auth: caller user id only (minimal surface for routes). */
-export type AuthSuccess = { user: { id: string }; error: null }
+/** Successful auth: caller id and optional Supabase email confirmation (for gated flows). */
+export type AuthSuccess = {
+	user: { id: string; email_confirmed_at: string | null }
+	error: null
+}
 
 /** Failed auth: pre-built JSON Response (401) for direct return from routes. */
 export type AuthFailure = { user: null; error: NextResponse }
@@ -63,7 +66,10 @@ export async function authenticateFromRequest(request: Request): Promise<AuthSuc
 		}
 	}
 
-	return { user: { id: user.id }, error: null }
+	return {
+		user: { id: user.id, email_confirmed_at: user.email_confirmed_at ?? null },
+		error: null,
+	}
 }
 
 /**

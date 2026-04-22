@@ -3,6 +3,9 @@
 // ============================================================================
 //
 // Buyer-facing form to submit a star rating and optional comment after an order.
+// Quick-tag chips (As described / Fast shipping / Great comms / Easy transaction)
+// append their label to the comment field for one-tap feedback.
+//
 // Posts via useSubmitReview and navigates back to /buyer on success.
 //
 // Layout
@@ -10,7 +13,6 @@
 // Uses Field primitives for the rating row (custom slider + FieldDescription)
 // and the comment field. The rating label uses onClick + ref focus because
 // <label htmlFor> does not associate reliably with div[role="slider"].
-//
 
 
 "use client";
@@ -28,10 +30,31 @@ import {
 	FieldLabel,
 } from "@/components/primitives/field";
 import { Textarea } from "@/components/primitives/textarea";
+import { cn } from "@/lib/utils";
+
+// ----------------------------------------------------------------------------
+// Quick-tag chips
+// ----------------------------------------------------------------------------
+
+const QUICK_TAGS = [
+	"As described",
+	"Fast shipping",
+	"Great comms",
+	"Easy transaction",
+	"Well packaged",
+] as const;
+
+// ----------------------------------------------------------------------------
+// Types
+// ----------------------------------------------------------------------------
 
 type ReviewFormProps = {
 	orderId: string;
 };
+
+// ----------------------------------------------------------------------------
+// Component
+// ----------------------------------------------------------------------------
 
 /**
  * Form for submitting a review for a completed order (rating + optional comment).
@@ -46,6 +69,15 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
 	const [rating, setRating] = useState(0);
 	const [comment, setComment] = useState("");
 	const [isPending, setIsPending] = useState(false);
+
+	/** Appends a quick tag to the comment, avoiding duplicates. */
+	function applyTag(tag: string) {
+		setComment((prev) => {
+			const trimmed = prev.trim();
+			if (trimmed.includes(tag)) return prev;
+			return trimmed ? `${trimmed}. ${tag}` : tag;
+		});
+	}
 
 	async function onSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -79,6 +111,7 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
 			aria-label="Submit review"
 			onSubmit={(e) => void onSubmit(e)}
 		>
+			{/* Star rating */}
 			<Field className="space-y-2" data-invalid={false}>
 				<FieldLabel
 					id="review-rating-label"
@@ -96,10 +129,36 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
 					ariaDescribedBy="review-rating-hint"
 				/>
 				<FieldDescription id="review-rating-hint" className="text-xs">
-					Required — tap a star or focus this control and use arrow keys (left/right) to choose 1–5. Home and
-					End jump to 1 and 5.
+					Required — tap a star or use arrow keys (left / right) to choose 1–5.
 				</FieldDescription>
 			</Field>
+
+			{/* Quick-tag chips */}
+			<div className="flex flex-col gap-2">
+				<p className="text-sm font-medium">Quick tags</p>
+				<div className="flex flex-wrap gap-2">
+					{QUICK_TAGS.map((tag) => {
+						const active = comment.includes(tag);
+						return (
+							<button
+								key={tag}
+								type="button"
+								onClick={() => applyTag(tag)}
+								className={cn(
+									"rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+									active
+										? "border-primary bg-primary/10 text-primary"
+										: "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+								)}
+							>
+								{active ? "✓ " : ""}{tag}
+							</button>
+						);
+					})}
+				</div>
+			</div>
+
+			{/* Comment */}
 			<Field className="space-y-2" data-invalid={false}>
 				<FieldLabel htmlFor="review-comment">Comment (optional)</FieldLabel>
 				<Textarea
@@ -108,9 +167,10 @@ export function ReviewForm({ orderId }: ReviewFormProps) {
 					placeholder="Share your experience with the seller…"
 					value={comment}
 					onChange={(ev) => setComment(ev.target.value)}
-					rows={5}
+					rows={4}
 				/>
 			</Field>
+
 			<Button type="submit" disabled={isPending || rating < 1} className="w-full sm:w-fit">
 				{isPending ? "Submitting…" : "Submit review"}
 			</Button>

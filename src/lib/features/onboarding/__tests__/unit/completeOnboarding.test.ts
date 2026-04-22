@@ -155,6 +155,24 @@ describe('completeOnboarding', () => {
 		})
 	})
 
+	it('omits phone_number in patch when not provided (email-verified completion)', async () => {
+		vi.mocked(profiles.getProfileById).mockResolvedValue({ data: baseProfile(), error: null })
+		vi.mocked(profiles.updateProfile).mockResolvedValue({ data: baseProfile(), error: null })
+
+		await completeOnboarding('u1', {
+			display_name: 'A',
+			city: 'Karachi',
+			locale: 'en',
+		})
+
+		expect(profiles.updateProfile).toHaveBeenCalledWith('u1', {
+			display_name: 'A',
+			city: 'Karachi',
+			locale: 'en',
+			onboarding_completed_at: expect.any(String),
+		})
+	})
+
 	it('skips claim when handle already matches', async () => {
 		vi.mocked(profiles.getProfileById).mockResolvedValue({
 			data: baseProfile({ handle: 'same_h' }),

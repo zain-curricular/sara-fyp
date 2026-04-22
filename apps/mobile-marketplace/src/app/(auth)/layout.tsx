@@ -8,8 +8,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 				className="border-b border-border bg-background/80 px-4 py-3 backdrop-blur sm:px-6"
 			>
 				<div className="mx-auto flex w-full max-w-6xl items-center">
-					<Link href="/" className="text-sm font-semibold tracking-tight">
-						Mobile marketplace
+					<Link href="/" className="flex items-center gap-2">
+						<span className="size-2.5 rounded-full bg-brand" />
+						<span className="text-sm font-bold tracking-tight">
+							mobile<span className="text-primary">mart</span>
+						</span>
 					</Link>
 				</div>
 			</div>
