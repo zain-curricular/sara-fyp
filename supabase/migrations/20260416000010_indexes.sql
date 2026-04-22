@@ -63,7 +63,7 @@ CREATE INDEX idx_listings_details ON listings USING gin (details)
 
 -- Auctions ending soon (for browse + pg_cron expiry job)
 CREATE INDEX idx_auction_ending ON auction_config (auction_end_at)
-	WHERE auction_end_at > now();
+	WHERE auction_end_at IS NOT NULL;
 
 
 -- -------------------------------------------------------

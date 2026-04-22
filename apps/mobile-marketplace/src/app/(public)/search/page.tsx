@@ -28,6 +28,8 @@ export default async function SearchPage({
 
 	const { data: listings, pagination, error } = await searchListingsPublic(query);
 	if (error) {
+		// Keep the user-facing error generic, but log the real cause for debugging.
+		console.error("searchListingsPublic failed", { query, error });
 		throw new Error("Failed to search listings");
 	}
 

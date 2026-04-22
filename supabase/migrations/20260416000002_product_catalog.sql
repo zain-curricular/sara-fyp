@@ -16,6 +16,10 @@
 -- Admin-managed — not user-generated content.
 --
 
+-- Extensions required by this migration.
+-- Supabase enables many extensions, but local CLI containers start minimal.
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 
 -- -------------------------------------------------------
 -- Categories (hierarchical, per platform)
