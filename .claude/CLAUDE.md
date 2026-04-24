@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **shared Supabase backend** powering two AI-powered marketplace frontends — one for **mobile phones** and one for **cars**. Both platforms share the same database, auth, storage, and business logic (listings, auctions, escrow, chat, warranty). Product-specific differences (specs, inspection criteria, categories) are handled via a `platform` enum and JSONB `details`/`specs` columns — not separate tables.
+This is an **AI-powered automotive marketplace** — a single Next.js app backed by Supabase. It covers listings, auctions, escrow, chat, warranty, and seller/buyer flows for cars.
 
 ## Commands
 
@@ -30,8 +30,9 @@ npm run supabase:gen-types   # Regenerate database.types.ts
 
 ```bash
 # Unit tests (no DB needed)
-npm run test                                 # Watch mode
-npm run test -- --run path/to/file.test.ts   # Single file
+npm run test                                 # Run all unit tests once
+npm run test:watch                           # Watch mode
+npm run test -- path/to/file.test.ts         # Single file
 
 # Integration tests (requires running Supabase)
 npm run test:integration
@@ -44,7 +45,7 @@ npm run test:e2e
 npm run test:e2e:ui                          # Interactive UI mode
 
 # Storybook
-npm run storybook                            # Dev server on port 6006
+npm run storybook                            # Dev server on port 6007
 ```
 
 ### Installing Dependencies
@@ -66,11 +67,11 @@ _CONVENTIONS/       # Architecture & convention docs (loaded by skills)
 
 ### App Structure (`src/`)
 
-- **`app/`** — Next.js App Router pages and API routes. Route groups: `(auth)`, `(public)`, `(legal)`, `seller/`, `buyer/`, `admin/`
+- **`app/`** — Next.js App Router pages and API routes. Route groups: `(auth)`, `(public)`, `(buyer)`, `seller/`, `buyer/`, `admin/`, `messages/`, `notifications/`, `wholesale/`
+- **`components/`** — UI components (shadcn/ui primitives + feature compositions)
 - **`lib/features/`** — Feature modules (domain logic). Each follows the two-barrel pattern (see below)
 - **`lib/supabase/`** — Supabase client setup and generated types
-- **`lib/auth/`** — Authentication utilities
-- **`elements/`** — Shared UI components (shadcn/ui primitives + custom)
+- **`lib/providers/`** — React context providers (QueryClient, theme, etc.)
 - **`middleware.ts`** — Next.js middleware
 
 ### Three-Layer Server Architecture
@@ -96,7 +97,7 @@ Active features: `listings`, `auctions`, `escrow`, `device-testing`, `ai-engine`
 
 ### Key Technology
 
-- **Next.js 15** with App Router
+- **Next.js 16** with App Router
 - **Supabase** (Postgres + Auth + Storage + Realtime + Edge Functions)
 - **Tailwind CSS v4** (CSS-first config, no `tailwind.config.js`)
 - **Zod v4** for validation
@@ -122,11 +123,12 @@ Active features: `listings`, `auctions`, `escrow`, `device-testing`, `ai-engine`
 
 Three Vitest configs in the project root:
 
-| Config                         | Purpose           | DB Required |
-| ------------------------------ | ----------------- | ----------- |
-| `vitest.config.ts`             | Unit tests        | No          |
-| `vitest.integration.config.ts` | Integration tests | Yes         |
-| `vitest.api.config.ts`         | API route tests   | Yes         |
+| Config                          | Purpose           | DB Required |
+| ------------------------------- | ----------------- | ----------- |
+| `vitest.config.mts`             | Unit tests        | No          |
+| `vitest.integration.config.mts` | Integration tests | Yes         |
+| `vitest.api.config.mts`         | API route tests   | Yes         |
+| `vitest.storybook.config.ts`    | Storybook tests   | No          |
 
 Playwright config: `playwright.config.ts`
 

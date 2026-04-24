@@ -1,19 +1,46 @@
-// ============================================================================
-// Product catalog — domain types
-// ============================================================================
-//
-// Re-exports Row aliases from database.types for the catalog feature module.
+export type CatalogPlatform = "mobile" | "automotive";
 
-import type {
-	BrandRow as DBBrand,
-	CategoryRow as DBCategory,
-	ModelRow as DBModel,
-	PlatformType as DBPlatform,
-	SpecificationRow as DBSpec,
-} from '@/lib/supabase/database.types'
+export type Brand = {
+	id: string;
+	platform: CatalogPlatform;
+	name: string;
+	slug: string;
+	logo_url: string | null;
+	created_at: string;
+	updated_at: string;
+};
 
-export type PlatformType = DBPlatform
-export type CategoryRow = DBCategory
-export type BrandRow = DBBrand
-export type ModelRow = DBModel
-export type SpecificationRow = DBSpec
+export type Model = {
+	id: string;
+	brand_id: string;
+	category_id: string;
+	name: string;
+	slug: string;
+	year: number | null;
+	image_url: string | null;
+	is_active: boolean;
+	created_at: string;
+	updated_at: string;
+};
+
+export type Specification = {
+	id: string;
+	model_id: string;
+	specs: Record<string, unknown>;
+	created_at: string;
+	updated_at: string;
+};
+
+export type CatalogVariant = {
+	key: string;
+	value: string;
+};
+
+/** Public listing fields for catalog browse (matches `listings` columns we select). */
+export type ListingSummary = {
+	id: string;
+	title: string;
+	price: number;
+	city: string;
+	condition: string;
+};

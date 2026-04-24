@@ -1,12 +1,7 @@
-// ============================================================================
-// Favorites — client-safe barrel
-// ============================================================================
+/** Client barrel — import hooks/types from `@/lib/features/favorites`. Server fetch: `@/lib/features/favorites/services`. */
 
-export {
-	toggleFavoriteBodySchema,
-	favoritesListQuerySchema,
-	recentViewsQuerySchema,
-	type ToggleFavoriteBody,
-} from './schemas'
+export type { FavoriteListingRow, FavoritesListPayload, ViewedListingRow, ViewedListPayload } from "./types";
 
-export type { FavoriteListingItem, ViewedListingItem } from './types'
+export { favoritesAndViewsQuery } from "./query";
+
+export { useFavorites, useToggleFavorite, useViewedHistory } from "./hooks";

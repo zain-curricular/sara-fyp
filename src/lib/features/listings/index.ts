@@ -1,19 +1,17 @@
-// ============================================================================
-// Listings — client-safe barrel
-// ============================================================================
+/** Client barrel — import from `@/lib/features/listings` only. */
 
-export type { ListingRow, ListingImageRow } from './core/types'
+export type { CategoryOption, ListingImageRecord, ListingRecord, ListingsPagination } from "./types";
+
+export type { CreateListingWizardInput, ListingsSearchParams } from "./schemas";
+export { createListingWizardSchema, listingsSearchParamsSchema } from "./schemas";
 
 export {
-	createListingSchema,
-	updateListingSchema,
-	adminModerateListingSchema,
-	type CreateListingInput,
-	type UpdateListingInput,
-} from './core/schemas'
+	useCreateListing,
+	useListingDetail,
+	usePublishListing,
+	useSearchListings,
+	useUpdateListing,
+	useUploadImages,
+} from "./hooks";
 
-export { listingsSearchQuerySchema, type ListingsSearchQuery } from './search/schemas'
-
-export { reorderListingImagesSchema } from './images/schemas'
-
-export { LISTING_IMAGE_MAX_BYTES, LISTING_IMAGE_ALLOWED_MIME } from './images/config'
+export { toListingsApiQuery } from "./search-query";

@@ -1,17 +1,33 @@
-// ============================================================================
-// Favorites & viewed history — public shapes
-// ============================================================================
+import type { ListingRecord } from "@/lib/features/listings/types";
 
-import type { ListingRow } from '@/lib/supabase/database.types'
+/** One row from GET /api/favorites/me — listing plus when it was saved. */
+export type FavoriteListingRow = {
+	listing: ListingRecord;
+	favorited_at: string;
+};
 
-/** One saved listing in the wishlist (listing row + when it was favorited). */
-export type FavoriteListingItem = {
-	listing: ListingRow
-	favorited_at: string
-}
+/** One row from GET /api/me/recent-views — listing plus last viewed time. */
+export type ViewedListingRow = {
+	listing: ListingRecord;
+	viewed_at: string;
+};
 
-/** Listing row plus last viewed time (recently viewed widget). */
-export type ViewedListingItem = {
-	listing: ListingRow
-	viewed_at: string
-}
+export type FavoritesListPayload = {
+	items: FavoriteListingRow[];
+	pagination: {
+		total: number;
+		limit: number;
+		offset: number;
+		hasMore: boolean;
+	};
+};
+
+export type ViewedListPayload = {
+	items: ViewedListingRow[];
+	pagination: {
+		total: number;
+		limit: number;
+		offset: number;
+		hasMore: boolean;
+	};
+};
