@@ -2,128 +2,97 @@
 // Messages Shell
 // ============================================================================
 //
-// Thread-per-listing chat inbox (Wireframe Variant B). Desktop: 3-column grid
-// (conversation list | message thread | listing context rail). Mobile: stacked
-// list → thread (thread hidden until a conversation is selected).
+// Two-panel real-time chat inbox. Desktop: side-by-side conversation list and
+// message thread. Mobile: stacked — list slides to thread on conversation
+// select.
 //
-// All data is placeholder — no messaging API exists yet. Connect the real
-// Supabase Realtime channel when the messaging feature ships.
+// Data flow:
+//   1. SSR initial conversations arrive as props.
+//   2. useMessages fetches thread on conversation select.
+//   3. useRealtimeMessages subscribes to Supabase Realtime for live appends.
+//   4. useSendMessage POSTs new messages; realtime delivers them to both sides.
+//   5. markConversationRead called when thread opens.
 
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ImageIcon, Paperclip, Send, X } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { formatDistanceToNow } from "date-fns";
+import {
+	ArrowLeft,
+	ExternalLink,
+	MessageSquareDashed,
+	Paperclip,
+	Send,
+} from "lucide-react";
 
 import { Badge } from "@/components/primitives/badge";
 import { Button } from "@/components/primitives/button";
-import { Card, CardContent } from "@/components/primitives/card";
 import { Input } from "@/components/primitives/input";
 import { Separator } from "@/components/primitives/separator";
+import { Skeleton } from "@/components/primitives/skeleton";
 import { cn } from "@/lib/utils";
 
+import type { Conversation, Message } from "@/lib/features/messaging";
+import {
+	useMarkConversationRead,
+	useMessages,
+	useRealtimeMessages,
+	useSendMessage,
+} from "@/lib/features/messaging";
+
 // ----------------------------------------------------------------------------
-// Placeholder data
+// Props
 // ----------------------------------------------------------------------------
 
-type Conversation = {
-	id: string;
-	initials: string;
-	handle: string;
-	preview: string;
-	time: string;
-	item: string;
-	price: string;
-	status: "escrow" | "negotiating" | "shipped" | "closed";
-	unread: number;
-	orderId: string | null;
-};
-
-type Message = {
-	id: string;
-	from: "me" | "them";
-	text: string;
-	time: string;
-	imageUrl?: string;
-};
-
-const MOCK_CONVOS: Conversation[] = [
-	{
-		id: "c1",
-		initials: "JK",
-		handle: "julia_k",
-		preview: "here — barely any wear, fitment confirmed for your model",
-		time: "2m",
-		item: "Alternator · Toyota Corolla 2019",
-		price: "Rs 18,500",
-		status: "escrow",
-		unread: 2,
-		orderId: "A-9421",
-	},
-	{
-		id: "c2",
-		initials: "NO",
-		handle: "nico_o",
-		preview: "yes, mechanic-tested last week · all connections intact",
-		time: "1h",
-		item: "Brake Disc Set · Honda Civic",
-		price: "Rs 7,200",
-		status: "negotiating",
-		unread: 1,
-		orderId: null,
-	},
-	{
-		id: "c3",
-		initials: "RA",
-		handle: "ra_2",
-		preview: "shipped! tracking number attached.",
-		time: "Apr 14",
-		item: "Head Gasket · Suzuki Swift",
-		price: "Rs 4,800",
-		status: "shipped",
-		unread: 0,
-		orderId: "A-9388",
-	},
-	{
-		id: "c4",
-		initials: "JA",
-		handle: "jae_k",
-		preview: "thanks for the smooth transaction!",
-		time: "Apr 11",
-		item: "Radiator Fan · Hyundai Elantra",
-		price: "Rs 3,500",
-		status: "closed",
-		unread: 0,
-		orderId: "A-9212",
-	},
-];
-
-const MOCK_THREAD: Message[] = [
-	{ id: "m1", from: "them", text: "hi! shipped the part this morning. tracking TCS 4412-8821-00", time: "Apr 19 · 14:02" },
-	{ id: "m2", from: "me", text: "thanks! quick question — how bad is the surface corrosion? can I see a photo?", time: "14:08" },
-	{ id: "m3", from: "them", text: "here — barely any wear, fitment confirmed for your model", time: "14:11" },
-];
-
-const STATUS_LABELS: Record<Conversation["status"], string> = {
-	escrow: "in escrow",
-	negotiating: "negotiating",
-	shipped: "shipped",
-	closed: "closed",
+type MessagesShellProps = {
+	initialConversations: Conversation[];
+	currentUserId: string;
+	/** Pre-selected conversation ID (from /messages/[conversationId] redirect). */
+	preselectedId?: string;
 };
 
 // ----------------------------------------------------------------------------
-// Conversation row
+// Helpers
 // ----------------------------------------------------------------------------
 
-function ConvoRow({
+function formatTime(iso: string): string {
+	try {
+		return formatDistanceToNow(new Date(iso), { addSuffix: false });
+	} catch {
+		return "";
+	}
+}
+
+function getInitials(name: string): string {
+	return name
+		.split(" ")
+		.slice(0, 2)
+		.map((w) => w[0] ?? "")
+		.join("")
+		.toUpperCase();
+}
+
+// ----------------------------------------------------------------------------
+// ConversationRow
+// ----------------------------------------------------------------------------
+
+function ConversationRow({
 	convo,
 	active,
+	currentUserId,
 	onClick,
 }: {
 	convo: Conversation;
 	active: boolean;
+	currentUserId: string;
 	onClick: () => void;
 }) {
+	const isBuyer = convo.buyerId === currentUserId;
+	const unread = isBuyer ? convo.buyerUnreadCount : convo.sellerUnreadCount;
+	const initials = getInitials(convo.otherParty.fullName);
+
 	return (
 		<button
 			type="button"
@@ -133,27 +102,38 @@ function ConvoRow({
 				active ? "bg-primary/5" : "hover:bg-accent/40",
 			)}
 		>
-			{/* Avatar */}
-			<div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold">
-				{convo.initials}
+			{/* Avatar — initials only to avoid next/image overhead in chat lists */}
+			<div
+				className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold"
+				title={convo.otherParty.fullName}
+				aria-label={convo.otherParty.fullName}
+			>
+				{initials}
 			</div>
 
 			<div className="flex min-w-0 flex-1 flex-col gap-0.5">
 				<div className="flex items-center justify-between gap-2">
-					<span className="truncate text-sm font-semibold">@{convo.handle}</span>
-					<span className="shrink-0 text-[10px] text-muted-foreground">{convo.time}</span>
+					<span className="truncate text-sm font-semibold">
+						{convo.otherParty.fullName}
+					</span>
+					<span className="shrink-0 text-[10px] text-muted-foreground">
+						{formatTime(convo.lastMessageAt)}
+					</span>
 				</div>
-				<p className="truncate text-xs text-muted-foreground">{convo.preview}</p>
-				<div className="flex items-center gap-1.5">
-					<Badge
-						variant={convo.status === "escrow" ? "default" : "secondary"}
-						className="rounded-sm text-[9px]"
-					>
-						{STATUS_LABELS[convo.status]}
-					</Badge>
-					{convo.unread > 0 && (
-						<span className="flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
-							{convo.unread}
+
+				{convo.listing && (
+					<p className="truncate text-[10px] text-muted-foreground">
+						re: {convo.listing.title}
+					</p>
+				)}
+
+				<div className="flex items-center justify-between gap-2">
+					<p className="truncate text-xs text-muted-foreground">
+						{convo.lastMessagePreview || "No messages yet"}
+					</p>
+					{unread > 0 && (
+						<span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+							{unread}
 						</span>
 					)}
 				</div>
@@ -163,36 +143,227 @@ function ConvoRow({
 }
 
 // ----------------------------------------------------------------------------
-// Message bubble
+// MessageBubble
 // ----------------------------------------------------------------------------
 
-function MessageBubble({ msg }: { msg: Message }) {
-	const isMe = msg.from === "me";
+function MessageBubble({
+	msg,
+	isMe,
+}: {
+	msg: Message;
+	isMe: boolean;
+}) {
 	return (
 		<div className={cn("flex items-end gap-2", isMe && "flex-row-reverse")}>
-			{!isMe && (
-				<div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold">
-					JK
-				</div>
-			)}
 			<div
 				className={cn(
-					"max-w-[70%] rounded-2xl px-3 py-2 text-sm leading-relaxed",
+					"max-w-[75%] rounded-2xl px-3 py-2 text-sm leading-relaxed",
 					isMe
 						? "rounded-br-sm bg-primary text-primary-foreground"
-						: "rounded-bl-sm bg-muted/60 text-foreground",
+						: "rounded-bl-sm bg-muted/70 text-foreground",
 				)}
 			>
-				{msg.text}
+				<p className="whitespace-pre-wrap break-words">{msg.body}</p>
+
+				{msg.attachments.length > 0 && (
+					<div className="mt-1.5 flex flex-col gap-1">
+						{msg.attachments.map((url, i) => (
+							<a
+								key={i}
+								href={url}
+								target="_blank"
+								rel="noopener noreferrer"
+								className={cn(
+									"flex items-center gap-1 text-xs underline",
+									isMe ? "text-primary-foreground/80" : "text-muted-foreground",
+								)}
+							>
+								<Paperclip className="size-3" />
+								Attachment {i + 1}
+							</a>
+						))}
+					</div>
+				)}
+
 				<p
 					className={cn(
 						"mt-0.5 text-[10px]",
 						isMe ? "text-primary-foreground/60" : "text-muted-foreground",
 					)}
 				>
-					{msg.time}
+					{formatTime(msg.createdAt)}
+					{msg.readAt && isMe && " · read"}
 				</p>
 			</div>
+		</div>
+	);
+}
+
+// ----------------------------------------------------------------------------
+// Thread panel
+// ----------------------------------------------------------------------------
+
+function ThreadPanel({
+	conversation,
+	currentUserId,
+	onBack,
+}: {
+	conversation: Conversation;
+	currentUserId: string;
+	onBack: () => void;
+}) {
+	const [draft, setDraft] = useState("");
+	const bottomRef = useRef<HTMLDivElement>(null);
+
+	const { messages, isLoading, appendMessage } = useMessages(conversation.id);
+	const { send, isSending } = useSendMessage(conversation.id);
+	const markRead = useMarkConversationRead();
+
+	// Mark conversation read on open
+	useEffect(() => {
+		void markRead(conversation.id);
+	}, [conversation.id, markRead]);
+
+	// Realtime subscription
+	useRealtimeMessages(
+		conversation.id,
+		useCallback(
+			(msg: Message) => {
+				appendMessage(msg);
+			},
+			[appendMessage],
+		),
+	);
+
+	// Scroll to bottom when messages change
+	useEffect(() => {
+		bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+	}, [messages]);
+
+	const handleSend = async () => {
+		const body = draft.trim();
+		if (!body || isSending) return;
+		setDraft("");
+		await send({ body, attachments: [] });
+	};
+
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+		if (e.key === "Enter" && !e.shiftKey) {
+			e.preventDefault();
+			void handleSend();
+		}
+	};
+
+	return (
+		<div container-id="messages-thread" className="flex flex-col">
+			{/* Thread header */}
+			<div className="flex items-center gap-3 border-b border-border px-4 py-3">
+				<button
+					type="button"
+					className="shrink-0 text-muted-foreground lg:hidden"
+					onClick={onBack}
+					aria-label="Back to list"
+				>
+					<ArrowLeft className="size-4" />
+				</button>
+
+				<div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold">
+					{getInitials(conversation.otherParty.fullName)}
+				</div>
+
+				<div className="flex min-w-0 flex-1 flex-col">
+					<p className="text-sm font-semibold">{conversation.otherParty.fullName}</p>
+					{conversation.listing && (
+						<p className="truncate text-xs text-muted-foreground">
+							re: {conversation.listing.title}
+						</p>
+					)}
+				</div>
+
+				{conversation.listingId && (
+					<Link
+						href={`/listings/${conversation.listingId}`}
+						className="shrink-0 text-muted-foreground hover:text-foreground"
+						aria-label="View listing"
+					>
+						<ExternalLink className="size-4" />
+					</Link>
+				)}
+			</div>
+
+			{/* Messages */}
+			<div
+				container-id="messages-thread-body"
+				className="flex flex-1 flex-col gap-3 overflow-y-auto p-4 min-h-0"
+				style={{ maxHeight: "calc(100% - 118px)" }}
+			>
+				{isLoading && (
+					<div className="flex flex-col gap-3">
+						<Skeleton className="h-10 w-2/3" />
+						<Skeleton className="ml-auto h-10 w-1/2" />
+						<Skeleton className="h-10 w-3/5" />
+					</div>
+				)}
+
+				{!isLoading && messages.length === 0 && (
+					<div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
+						<MessageSquareDashed className="size-8 text-muted-foreground/30" aria-hidden />
+						<p className="text-sm text-muted-foreground">
+							No messages yet. Say hello!
+						</p>
+					</div>
+				)}
+
+				{messages.map((msg) => (
+					<MessageBubble
+						key={msg.id}
+						msg={msg}
+						isMe={msg.senderId === currentUserId}
+					/>
+				))}
+
+				<div ref={bottomRef} />
+			</div>
+
+			{/* Input bar */}
+			<div className="flex items-center gap-2 border-t border-border p-3">
+				<Input
+					value={draft}
+					onChange={(e) => setDraft(e.target.value)}
+					onKeyDown={handleKeyDown}
+					placeholder="Type a message…"
+					className="flex-1"
+					disabled={isSending}
+					autoComplete="off"
+				/>
+				<Button
+					type="button"
+					size="icon-sm"
+					onClick={() => void handleSend()}
+					disabled={!draft.trim() || isSending}
+					aria-label="Send message"
+				>
+					<Send className="size-4" />
+				</Button>
+			</div>
+		</div>
+	);
+}
+
+// ----------------------------------------------------------------------------
+// Empty thread placeholder
+// ----------------------------------------------------------------------------
+
+function EmptyThread() {
+	return (
+		<div
+			container-id="messages-thread-empty"
+			className="hidden flex-1 flex-col items-center justify-center gap-3 text-center lg:flex"
+		>
+			<MessageSquareDashed className="size-10 text-muted-foreground/20" aria-hidden />
+			<p className="text-sm text-muted-foreground">
+				Select a conversation to start chatting
+			</p>
 		</div>
 	);
 }
@@ -201,40 +372,61 @@ function MessageBubble({ msg }: { msg: Message }) {
 // Shell
 // ----------------------------------------------------------------------------
 
-/** Chat inbox — conversation list + active thread + listing rail. */
-export default function MessagesShell() {
-	const [activeId, setActiveId] = useState<string>("c1");
-	const [reply, setReply] = useState("");
+/** Real-time two-panel messaging inbox. */
+export default function MessagesShell({
+	initialConversations,
+	currentUserId,
+	preselectedId,
+}: MessagesShellProps) {
+	const searchParams = useSearchParams();
 
-	const active = MOCK_CONVOS.find((c) => c.id === activeId) ?? MOCK_CONVOS[0]!;
-	const totalUnread = MOCK_CONVOS.reduce((n, c) => n + c.unread, 0);
+	const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
+	const [activeId, setActiveId] = useState<string | null>(
+		preselectedId ?? searchParams.get("conversation") ?? null,
+	);
+
+	const activeConversation = conversations.find((c) => c.id === activeId) ?? null;
+
+	const totalUnread = conversations.reduce((n, c) => {
+		const mine = c.buyerId === currentUserId ? c.buyerUnreadCount : c.sellerUnreadCount;
+		return n + mine;
+	}, 0);
+
+	const selectConversation = (id: string) => {
+		setActiveId(id);
+		// Reset unread count locally
+		setConversations((prev) =>
+			prev.map((c) => {
+				if (c.id !== id) return c;
+				return c.buyerId === currentUserId
+					? { ...c, buyerUnreadCount: 0 }
+					: { ...c, sellerUnreadCount: 0 };
+			}),
+		);
+	};
 
 	return (
 		<div container-id="messages-shell" className="flex flex-col gap-4">
 
-			{/* Header */}
+			{/* Page header */}
 			<header className="flex flex-wrap items-center justify-between gap-3">
 				<div className="flex items-center gap-2">
-					<h1 className="text-3xl font-bold tracking-tight">Conversations</h1>
+					<h1 className="text-3xl font-bold tracking-tight">Messages</h1>
 					{totalUnread > 0 && (
 						<Badge variant="default" className="rounded-sm">
 							{totalUnread} unread
 						</Badge>
 					)}
 				</div>
-				<div className="flex gap-2">
-					<Badge variant="secondary" className="rounded-sm">Active ({MOCK_CONVOS.filter(c => c.status !== "closed").length})</Badge>
-					<Badge variant="outline" className="rounded-sm">Closed</Badge>
-				</div>
 			</header>
 
-			{/* 3-column grid on desktop, stacked on mobile */}
+			{/* Two-panel grid */}
 			<div
 				container-id="messages-grid"
-				className="overflow-hidden rounded-xl border border-border lg:grid lg:h-[600px] lg:grid-cols-[280px_minmax(0,1fr)_240px]"
+				className="overflow-hidden rounded-xl border border-border lg:grid lg:h-[600px] lg:grid-cols-[300px_minmax(0,1fr)]"
 			>
 
-				{/* ── Conversation list ── */}
+				{/* Conversation list */}
 				<div
 					container-id="messages-list"
 					className={cn(
@@ -242,133 +434,39 @@ export default function MessagesShell() {
 						activeId ? "hidden lg:flex" : "flex",
 					)}
 				>
-					<div className="border-b border-border p-3">
-						<Input placeholder="Search messages…" className="h-8 text-xs" />
-					</div>
-					{MOCK_CONVOS.map((c, i) => (
-						<div key={c.id}>
-							{i > 0 && <Separator />}
-							<ConvoRow
-								convo={c}
-								active={activeId === c.id}
-								onClick={() => setActiveId(c.id)}
-							/>
-						</div>
-					))}
-				</div>
-
-				{/* ── Active thread ── */}
-				<div
-					container-id="messages-thread"
-					className={cn(
-						"flex flex-col border-border",
-						activeId ? "flex" : "hidden lg:flex",
-					)}
-				>
-					{/* Thread header */}
-					<div className="flex items-center gap-3 border-b border-border px-4 py-3">
-						<button
-							type="button"
-							className="text-muted-foreground lg:hidden"
-							onClick={() => setActiveId("")}
-							aria-label="Back to list"
-						>
-							<X className="size-4" />
-						</button>
-						<div className="flex size-8 items-center justify-center rounded-full bg-muted text-xs font-bold">
-							{active.initials}
-						</div>
-						<div className="flex min-w-0 flex-1 flex-col">
-							<p className="text-sm font-semibold">@{active.handle}</p>
-							<p className="text-xs text-muted-foreground truncate">
-								re: {active.item}
-								{active.orderId ? ` · order #${active.orderId}` : ""}
+					{conversations.length === 0 ? (
+						<div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-16 text-center">
+							<MessageSquareDashed className="size-8 text-muted-foreground/30" aria-hidden />
+							<p className="text-sm text-muted-foreground">No conversations yet.</p>
+							<p className="text-xs text-muted-foreground">
+								Contact a seller from any listing to start chatting.
 							</p>
 						</div>
-						<Badge
-							variant={active.status === "escrow" ? "default" : "secondary"}
-							className="shrink-0 rounded-sm text-[9px]"
-						>
-							{STATUS_LABELS[active.status]}
-						</Badge>
-					</div>
-
-					{/* Messages */}
-					<div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
-						{MOCK_THREAD.map((msg) => (
-							<MessageBubble key={msg.id} msg={msg} />
-						))}
-					</div>
-
-					{/* Input bar */}
-					<div className="flex items-center gap-2 border-t border-border p-3">
-						<Button type="button" variant="ghost" size="icon-sm" disabled aria-label="Attach file">
-							<Paperclip className="size-4" />
-						</Button>
-						<Input
-							value={reply}
-							onChange={(e) => setReply(e.target.value)}
-							placeholder="Type a reply…"
-							className="flex-1"
-							onKeyDown={(e) => {
-								if (e.key === "Enter" && !e.shiftKey) {
-									e.preventDefault();
-									setReply("");
-								}
-							}}
-						/>
-						<Button type="button" size="icon-sm" disabled={!reply.trim()} aria-label="Send">
-							<Send className="size-4" />
-						</Button>
-					</div>
-				</div>
-
-				{/* ── Listing context rail ── */}
-				<div
-					container-id="messages-rail"
-					className="hidden flex-col gap-3 border-l border-border p-4 lg:flex"
-				>
-					<p className="text-xs font-medium text-muted-foreground">About this chat</p>
-
-					{/* Listing image placeholder */}
-					<div className="flex aspect-[4/3] w-full items-center justify-center rounded-lg bg-muted/40">
-						<ImageIcon className="size-8 text-muted-foreground/30" aria-hidden />
-					</div>
-
-					<div className="flex flex-col gap-1">
-						<p className="text-sm font-semibold leading-snug">{active.item}</p>
-						<p className="text-base font-bold tabular-nums text-primary">{active.price}</p>
-					</div>
-
-					<Link
-						href={`/listings/placeholder`}
-						className="rounded-lg border border-border px-3 py-1.5 text-center text-xs font-medium hover:bg-accent/40 transition-colors"
-					>
-						View listing ↗
-					</Link>
-
-					{active.orderId && (
-						<>
-							<Separator />
-							<div className="flex flex-col gap-1">
-								<p className="text-xs text-muted-foreground">Order #{active.orderId}</p>
-								<p className="text-xs font-medium">{STATUS_LABELS[active.status]}</p>
+					) : (
+						conversations.map((c, i) => (
+							<div key={c.id}>
+								{i > 0 && <Separator />}
+								<ConversationRow
+									convo={c}
+									active={activeId === c.id}
+									currentUserId={currentUserId}
+									onClick={() => selectConversation(c.id)}
+								/>
 							</div>
-							<div className="flex flex-wrap gap-1.5">
-								{["Track", "Refund", "Report"].map((a) => (
-									<button
-										key={a}
-										type="button"
-										className="rounded-full border border-border px-2 py-0.5 text-[10px] font-medium hover:bg-accent/40"
-										disabled
-									>
-										{a}
-									</button>
-								))}
-							</div>
-						</>
+						))
 					)}
 				</div>
+
+				{/* Thread panel / empty state */}
+				{activeConversation ? (
+					<ThreadPanel
+						conversation={activeConversation}
+						currentUserId={currentUserId}
+						onBack={() => setActiveId(null)}
+					/>
+				) : (
+					<EmptyThread />
+				)}
 			</div>
 		</div>
 	);

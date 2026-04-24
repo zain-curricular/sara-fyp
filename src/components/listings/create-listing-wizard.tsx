@@ -7,12 +7,17 @@
 //
 // Desktop: form left, sticky live-preview card right. Preview updates in
 // real-time from local state. API calls only fire on step transitions.
+//
+// AI Generate:
+// On step 1, an "AI Generate" button appears below the description field.
+// It calls POST /api/ai/generate-listing and fills in title + description.
+// Degrades gracefully: shows "AI unavailable" when model is not configured.
 
 "use client";
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { CheckCircle2, ImageIcon } from "lucide-react";
+import { CheckCircle2, ImageIcon, Loader2, Sparkles } from "lucide-react";
 
 import type { CategoryOption, CreateListingWizardInput } from "@/lib/features/listings";
 import { useCreateListing, usePublishListing, useUploadImages } from "@/lib/features/listings";
@@ -201,6 +206,10 @@ export function CreateListingWizard({ categories }: CreateListingWizardProps) {
 	const [saleType, setSaleType] = useState<SaleTypeValue>("fixed");
 	const [isNegotiable, setIsNegotiable] = useState(false);
 
+	// AI generate state
+	const [aiGenerating, setAiGenerating] = useState(false);
+	const [aiStatus, setAiStatus] = useState<"idle" | "generated" | "unavailable">("idle");
+
 	async function submitDetails() {
 		setError(null);
 		setBusy(true);
@@ -226,6 +235,47 @@ export function CreateListingWizard({ categories }: CreateListingWizardProps) {
 			setError(e instanceof Error ? e.message : "Could not create draft");
 		} finally {
 			setBusy(false);
+		}
+	}
+
+	async function handleAiGenerate() {
+		setAiGenerating(true);
+		setAiStatus("idle");
+
+		try {
+			const selectedCategory = categories.find((c) => c.id === categoryId);
+			const res = await fetch("/api/ai/generate-listing", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					title: title.trim() || "Spare part",
+					categoryName: selectedCategory?.name ?? "",
+					specs: {},
+					imageUrls: [],
+					vehicleTargets: [],
+				}),
+			});
+
+			const json = (await res.json()) as {
+				ok: boolean;
+				data?: {
+					suggestedTitle: string;
+					description: string;
+					conditionHint?: string;
+				};
+			};
+
+			if (json.ok && json.data) {
+				if (json.data.suggestedTitle) setTitle(json.data.suggestedTitle);
+				if (json.data.description) setDescription(json.data.description);
+				setAiStatus("generated");
+			} else {
+				setAiStatus("unavailable");
+			}
+		} catch {
+			setAiStatus("unavailable");
+		} finally {
+			setAiGenerating(false);
 		}
 	}
 
@@ -331,6 +381,36 @@ export function CreateListingWizard({ categories }: CreateListingWizardProps) {
 										placeholder="Describe the part's condition, fitment compatibility, any faults…"
 										rows={4}
 									/>
+
+									{/* AI Generate button */}
+									<div className="flex items-center gap-2 pt-1">
+										<Button
+											type="button"
+											variant="outline"
+											size="sm"
+											className="gap-1.5"
+											disabled={aiGenerating}
+											onClick={() => void handleAiGenerate()}
+										>
+											{aiGenerating ? (
+												<Loader2 className="size-3.5 animate-spin" aria-hidden />
+											) : (
+												<Sparkles className="size-3.5" aria-hidden />
+											)}
+											{aiGenerating ? "Generating…" : "✨ AI Generate"}
+										</Button>
+
+										{aiStatus === "generated" && (
+											<Badge variant="secondary" className="rounded-sm text-[10px]">
+												AI-generated — review before publishing
+											</Badge>
+										)}
+										{aiStatus === "unavailable" && (
+											<span className="text-xs text-muted-foreground">
+												AI unavailable — fill in manually
+											</span>
+										)}
+									</div>
 								</Field>
 							</CardContent>
 						</Card>

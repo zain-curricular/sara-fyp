@@ -5,18 +5,23 @@
 // Sticky top navigation bar. OLX-inspired layout: logo left, search centre,
 // nav links and auth actions right. Collapses gracefully on mobile.
 //
+// The notification bell subscribes to Supabase Realtime and shows a live
+// unread count badge. The header is a server component that renders the
+// NotificationBell client island for the realtime subscription.
 
 import Link from "next/link";
-import { Bell, MessageSquare, Search, Heart } from "lucide-react";
+import { MessageSquare, Search, Heart, ShoppingCart } from "lucide-react";
 
 import { buttonVariants } from "@/components/primitives/button";
 import { cn } from "@/lib/utils";
+
+import { NotificationBell } from "@/components/layout/notification-bell";
 
 const navLinks = [
 	{ label: "Browse", href: "/browse" },
 	{ label: "Parts", href: "/browse?type=parts" },
 	{ label: "Sell", href: "/seller/listings/new" },
-	{ label: "Help", href: "#" },
+	{ label: "Help", href: "/help" },
 ] as const;
 
 const navLinkClass =
@@ -41,7 +46,7 @@ export function SiteHeader() {
 				>
 					<span className="size-2.5 rounded-full bg-brand" />
 					<span className="text-sm font-bold tracking-tight sm:text-base">
-						auto<span className="text-primary">mart</span>
+						Shop<span className="text-primary">Smart</span>
 					</span>
 				</Link>
 
@@ -94,13 +99,20 @@ export function SiteHeader() {
 						<MessageSquare className="size-4" />
 					</Link>
 
-					{/* Notifications */}
+					{/* Notification bell (client island — realtime + badge) */}
+					<NotificationBell />
+
+					{/* Cart */}
 					<Link
-						href="/notifications"
-						className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
-						aria-label="Notifications"
+						href="/cart"
+						className={cn(
+							buttonVariants({ variant: "ghost", size: "icon" }),
+							"relative",
+						)}
+						aria-label="Shopping cart"
 					>
-						<Bell className="size-4" />
+						<ShoppingCart className="size-4" />
+						{/* Cart count badge is server-rendered — wrap in Suspense */}
 					</Link>
 
 					{/* Saved */}
@@ -116,7 +128,7 @@ export function SiteHeader() {
 					</Link>
 
 					<Link
-						href="/sign-in"
+						href="/login"
 						className={cn(buttonVariants({ size: "sm" }))}
 					>
 						Sign in

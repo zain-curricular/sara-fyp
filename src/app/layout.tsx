@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 
 import { AppProviders } from "@/lib/providers/app-providers";
+import { ChatbotWidget } from "@/components/chatbot/chatbot-widget";
 
 import "./globals.css";
 
@@ -35,7 +36,10 @@ export default function RootLayout({
 			suppressHydrationWarning
 		>
 			<body className="min-h-full flex flex-col bg-background font-sans text-foreground antialiased">
-				<AppProviders>{children}</AppProviders>
+				<AppProviders>
+					{children}
+					<ChatbotWidget />
+				</AppProviders>
 			</body>
 		</html>
 	);

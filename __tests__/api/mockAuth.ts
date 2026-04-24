@@ -5,38 +5,40 @@
 // Each `route.api.test.ts` that needs auth MUST register the mock before
 // importing this module or route handlers:
 //
-//   vi.mock('@/lib/auth/auth', () => ({ authenticateFromRequest: vi.fn() }))
+//   vi.mock('@/lib/auth/guards', () => ({ authenticateRequest: vi.fn() }))
 
 import { NextResponse } from 'next/server'
 import { vi } from 'vitest'
 
-import { authenticateFromRequest } from '@/lib/auth/auth'
+import { authenticateRequest } from '@/lib/auth/guards'
 
-/** Typed reference — only valid after `vi.mock('@/lib/auth/auth', …)` in the test file. */
-export const mockAuthenticateFromRequest = vi.mocked(authenticateFromRequest)
+/** Typed reference — only valid after `vi.mock('@/lib/auth/guards', …)` in the test file. */
+export const mockAuthenticateRequest = vi.mocked(authenticateRequest)
+
+/** @deprecated use mockAuthenticateRequest */
+export const mockAuthenticateFromRequest = mockAuthenticateRequest
 
 /**
- * Resolves auth as the given user id (matches `authenticateFromRequest` success shape).
+ * Resolves auth as the given user id with the buyer role by default.
  */
 export function mockAuthenticatedUser(
 	userId: string,
-	options?: { emailVerified?: boolean },
+	options?: { roles?: string[]; activeRole?: string },
 ): void {
-	mockAuthenticateFromRequest.mockResolvedValue({
-		user: {
-			id: userId,
-			email_confirmed_at: options?.emailVerified ? new Date().toISOString() : null,
-		},
-		error: null,
+	mockAuthenticateRequest.mockResolvedValue({
+		ok: true,
+		userId,
+		roles: options?.roles ?? ['buyer'],
+		activeRole: options?.activeRole ?? 'buyer',
 	})
 }
 
 /**
- * Resolves auth as missing/invalid token (401 envelope).
+ * Resolves auth as unauthenticated (401 envelope).
  */
 export function mockUnauthenticated(): void {
-	mockAuthenticateFromRequest.mockResolvedValue({
-		user: null,
+	mockAuthenticateRequest.mockResolvedValue({
+		ok: false,
 		error: NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 }),
 	})
 }

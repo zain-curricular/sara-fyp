@@ -29,6 +29,21 @@ export default function BuyerSettingsLayout({ children }: { children: React.Reac
 							Avatar
 						</Link>
 					</li>
+					<li>
+						<Link className={linkClass} href="/buyer/addresses">
+							Addresses
+						</Link>
+					</li>
+					<li>
+						<Link className={linkClass} href="/buyer/settings/password">
+							Password
+						</Link>
+					</li>
+					<li>
+						<Link className={linkClass} href="/buyer/settings/notifications">
+							Notifications
+						</Link>
+					</li>
 				</ul>
 				<Separator className="mt-4 lg:hidden" />
 			</nav>

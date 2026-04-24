@@ -2,182 +2,215 @@
 // Notifications Shell
 // ============================================================================
 //
-// Full-page notification inbox (Wireframe Variant B). Left rail: category
-// filter list + delivery preferences summary. Right: notification stream
-// grouped by date (Today / Yesterday / Earlier) with "mark all read" action.
+// Full-page notification inbox. Left: category filter tabs. Right: notification
+// stream grouped by date.
 //
-// All data is placeholder — no notifications API exists yet.
+// Data flow:
+//   1. SSR initial notifications arrive as props.
+//   2. useRealtimeNotifications subscribes to Supabase Realtime for live inserts.
+//   3. Clicking a notification marks it read optimistically, then confirms via API.
+//   4. "Mark all read" calls useMarkAllRead and updates local state.
 
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
+import { formatDistanceToNow } from "date-fns";
 import {
 	Bell,
+	CreditCard,
 	Gavel,
 	MessageSquare,
 	Package,
 	ShieldCheck,
 	Star,
-	CreditCard,
+	Wrench,
 } from "lucide-react";
 
 import { Badge } from "@/components/primitives/badge";
 import { Button } from "@/components/primitives/button";
-import { buttonVariants } from "@/components/primitives/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/primitives/card";
-import { Separator } from "@/components/primitives/separator";
 import { cn } from "@/lib/utils";
 
+import type { NotificationRecord } from "@/lib/features/notifications";
+import {
+	useMarkAllRead,
+	useMarkNotificationRead,
+	useRealtimeNotifications,
+	useUnreadCount,
+} from "@/lib/features/notifications";
+
 // ----------------------------------------------------------------------------
-// Placeholder data
+// Props
 // ----------------------------------------------------------------------------
 
-type NotifCategory = "all" | "bids" | "orders" | "chats" | "reviews" | "warranty" | "system";
-
-type Notif = {
-	id: string;
-	type: NotifCategory;
-	icon: React.ElementType;
-	title: string;
-	sub: string;
-	time: string;
-	group: "today" | "yesterday" | "earlier";
-	unread: boolean;
-	cta: string;
+type NotificationsShellProps = {
+	initialNotifications: NotificationRecord[];
+	currentUserId: string;
 };
 
-const MOCK_NOTIFS: Notif[] = [
-	{
-		id: "n1",
-		type: "bids",
-		icon: Gavel,
-		title: "You were outbid on Alternator · Toyota Corolla",
-		sub: "New bid: Rs 21,500 · 3 minutes left",
-		time: "just now",
-		group: "today",
-		unread: true,
-		cta: "Counter-bid",
-	},
-	{
-		id: "n2",
-		type: "orders",
-		icon: Package,
-		title: "Order shipped — Brake Disc Set · Honda Civic",
-		sub: "TCS 4412-8821-00 · arrives Thursday",
-		time: "2h ago",
-		group: "today",
-		unread: true,
-		cta: "Track",
-	},
-	{
-		id: "n3",
-		type: "chats",
-		icon: MessageSquare,
-		title: "julia_k replied to your message",
-		sub: '"here — barely any wear, fitment confirmed…"',
-		time: "2h ago",
-		group: "today",
-		unread: true,
-		cta: "Reply",
-	},
-	{
-		id: "n4",
-		type: "reviews",
-		icon: Star,
-		title: "You received a new review",
-		sub: '5★ from @nico_o · "great comms, fast dispatch"',
-		time: "yesterday",
-		group: "yesterday",
-		unread: false,
-		cta: "Read",
-	},
-	{
-		id: "n5",
-		type: "warranty",
-		icon: ShieldCheck,
-		title: "Warranty claim accepted",
-		sub: "Drop-off confirmed · AutoFix Lahore · Apr 18",
-		time: "Apr 18",
-		group: "earlier",
-		unread: false,
-		cta: "View",
-	},
-	{
-		id: "n6",
-		type: "system",
-		icon: CreditCard,
-		title: "Subscription renews May 12",
-		sub: "PRO plan · Rs 4,900/mo",
-		time: "Apr 17",
-		group: "earlier",
-		unread: false,
-		cta: "Manage",
-	},
-];
-
-const CATEGORIES: { key: NotifCategory; label: string; count: number }[] = [
-	{ key: "all", label: "All", count: 12 },
-	{ key: "bids", label: "Bids & auctions", count: 5 },
-	{ key: "orders", label: "Orders", count: 3 },
-	{ key: "chats", label: "Chats", count: 2 },
-	{ key: "reviews", label: "Reviews", count: 1 },
-	{ key: "warranty", label: "Warranty", count: 1 },
-	{ key: "system", label: "System", count: 0 },
-];
-
-const GROUPS: { key: Notif["group"]; label: string }[] = [
-	{ key: "today", label: "Today" },
-	{ key: "yesterday", label: "Yesterday" },
-	{ key: "earlier", label: "Earlier" },
-];
-
 // ----------------------------------------------------------------------------
-// Notification row
+// Helpers
 // ----------------------------------------------------------------------------
 
-function NotifRow({ notif }: { notif: Notif }) {
-	const Icon = notif.icon;
+type FilterKey = "all" | "unread";
+
+const NOTIFICATION_ICONS: Record<string, React.ElementType> = {
+	bid: Gavel,
+	auction: Gavel,
+	order: Package,
+	message: MessageSquare,
+	chat: MessageSquare,
+	review: Star,
+	warranty: ShieldCheck,
+	mechanic: Wrench,
+	payment: CreditCard,
+	system: Bell,
+};
+
+function getIcon(type: string): React.ElementType {
+	const key = Object.keys(NOTIFICATION_ICONS).find((k) => type.toLowerCase().includes(k));
+	return key ? NOTIFICATION_ICONS[key]! : Bell;
+}
+
+function formatTime(iso: string): string {
+	try {
+		return formatDistanceToNow(new Date(iso), { addSuffix: true });
+	} catch {
+		return "";
+	}
+}
+
+function groupByDate(notifications: NotificationRecord[]): {
+	today: NotificationRecord[];
+	yesterday: NotificationRecord[];
+	earlier: NotificationRecord[];
+} {
+	const now = new Date();
+	const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+	const yesterdayStart = todayStart - 86400000;
+
+	const today: NotificationRecord[] = [];
+	const yesterday: NotificationRecord[] = [];
+	const earlier: NotificationRecord[] = [];
+
+	for (const n of notifications) {
+		const ts = new Date(n.createdAt).getTime();
+		if (ts >= todayStart) {
+			today.push(n);
+		} else if (ts >= yesterdayStart) {
+			yesterday.push(n);
+		} else {
+			earlier.push(n);
+		}
+	}
+
+	return { today, yesterday, earlier };
+}
+
+// ----------------------------------------------------------------------------
+// NotificationRow
+// ----------------------------------------------------------------------------
+
+/**
+ * Renders the correct Lucide icon for a notification type inside a circular badge.
+ * The icon is looked up at render time using the module-level NOTIFICATION_ICONS map
+ * and rendered via createElement to avoid the React Compiler "component in render" lint.
+ */
+function NotificationIcon({ type, isUnread }: { type: string; isUnread: boolean }) {
+	const iconClass = cn("size-4", isUnread ? "text-primary" : "text-muted-foreground");
+	const IconEl = getIcon(type);
+
+	return (
+		<div
+			className={cn(
+				"mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full",
+				isUnread ? "bg-primary/10" : "bg-muted",
+			)}
+		>
+			{/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+			{(IconEl as any)({ className: iconClass, "aria-hidden": true })}
+		</div>
+	);
+}
+
+function NotificationRow({
+	notification,
+	onRead,
+}: {
+	notification: NotificationRecord;
+	onRead: (id: string) => void;
+}) {
+	const router = useRouter();
+	const isUnread = !notification.readAt;
+
+	const handleClick = () => {
+		if (isUnread) {
+			onRead(notification.id);
+		}
+	};
+
 	return (
 		<Card
 			size="sm"
+			onClick={handleClick}
 			className={cn(
 				"transition-colors",
-				notif.unread && "border-primary/20 bg-primary/[0.03]",
+				isUnread && "border-primary/20 bg-primary/[0.03]",
+				isUnread && "cursor-pointer hover:bg-accent/40",
 			)}
 		>
 			<CardContent className="flex items-start gap-3 py-3">
-				<div
-					className={cn(
-						"mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full",
-						notif.unread ? "bg-primary/10" : "bg-muted",
-					)}
-				>
-					<Icon
-						className={cn("size-4", notif.unread ? "text-primary" : "text-muted-foreground")}
-						aria-hidden
-					/>
-				</div>
+				{/* Icon */}
+				<NotificationIcon type={notification.type} isUnread={isUnread} />
 
+				{/* Content */}
 				<div className="flex min-w-0 flex-1 flex-col gap-0.5">
 					<div className="flex flex-wrap items-start justify-between gap-2">
-						<p className={cn("text-sm", notif.unread ? "font-semibold" : "font-medium")}>
-							{notif.title}
+						<p className={cn("text-sm", isUnread ? "font-semibold" : "font-medium")}>
+							{notification.title}
 						</p>
 						<div className="flex shrink-0 items-center gap-1.5">
-							{notif.unread && (
-								<span className="size-1.5 rounded-full bg-primary" aria-label="Unread" />
+							{isUnread && (
+								<span
+									className="size-1.5 rounded-full bg-primary"
+									aria-label="Unread"
+								/>
 							)}
-							<span className="text-[10px] text-muted-foreground">{notif.time}</span>
+							<span className="text-[10px] text-muted-foreground">
+								{formatTime(notification.createdAt)}
+							</span>
 						</div>
 					</div>
-					<p className="text-xs text-muted-foreground">{notif.sub}</p>
+					<p className="text-xs text-muted-foreground">{notification.body}</p>
 				</div>
-
-				<Button type="button" variant="outline" size="sm" className="shrink-0" disabled>
-					{notif.cta}
-				</Button>
 			</CardContent>
 		</Card>
+	);
+}
+
+// ----------------------------------------------------------------------------
+// DateGroup
+// ----------------------------------------------------------------------------
+
+function DateGroup({
+	label,
+	notifications,
+	onRead,
+}: {
+	label: string;
+	notifications: NotificationRecord[];
+	onRead: (id: string) => void;
+}) {
+	if (notifications.length === 0) return null;
+
+	return (
+		<div className="flex flex-col gap-2">
+			<p className="text-xs font-medium text-muted-foreground">{label}</p>
+			{notifications.map((n) => (
+				<NotificationRow key={n.id} notification={n} onRead={onRead} />
+			))}
+		</div>
 	);
 }
 
@@ -185,38 +218,70 @@ function NotifRow({ notif }: { notif: Notif }) {
 // Shell
 // ----------------------------------------------------------------------------
 
-/** Full-page notification inbox with sidebar category filter. */
-export default function NotificationsShell() {
-	const [category, setCategory] = useState<NotifCategory>("all");
-	const [allRead, setAllRead] = useState(false);
+/** Full-page notification inbox with date grouping, filter tabs, and realtime. */
+export default function NotificationsShell({
+	initialNotifications,
+	currentUserId,
+}: NotificationsShellProps) {
+	const [notifications, setNotifications] = useState<NotificationRecord[]>(initialNotifications);
+	const [filter, setFilter] = useState<FilterKey>("all");
 
-	const unreadCount = MOCK_NOTIFS.filter((n) => n.unread).length;
+	const unreadCount = useUnreadCount(notifications);
+	const { markRead } = useMarkNotificationRead();
+	const { markAllRead, isPending: isMarkingAll } = useMarkAllRead();
 
-	const visible = MOCK_NOTIFS.filter(
-		(n) => category === "all" || n.type === category,
-	).map((n) => ({ ...n, unread: allRead ? false : n.unread }));
+	// Prepend incoming realtime notifications
+	useRealtimeNotifications(
+		currentUserId,
+		useCallback((n: NotificationRecord) => {
+			setNotifications((prev) => [n, ...prev]);
+		}, []),
+	);
+
+	// Optimistic read
+	const handleMarkRead = async (id: string) => {
+		setNotifications((prev) =>
+			prev.map((n) =>
+				n.id === id ? { ...n, readAt: new Date().toISOString() } : n,
+			),
+		);
+		await markRead(id);
+	};
+
+	const handleMarkAllRead = async () => {
+		const now = new Date().toISOString();
+		setNotifications((prev) => prev.map((n) => ({ ...n, readAt: n.readAt ?? now })));
+		await markAllRead();
+	};
+
+	const visible =
+		filter === "unread" ? notifications.filter((n) => !n.readAt) : notifications;
+
+	const { today, yesterday, earlier } = groupByDate(visible);
+	const isEmpty = visible.length === 0;
 
 	return (
 		<div container-id="notifications-shell" className="flex flex-col gap-5">
 
-			{/* Header */}
+			{/* Page header */}
 			<header className="flex flex-wrap items-center justify-between gap-3">
 				<div className="flex items-center gap-2">
 					<h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
-					{!allRead && unreadCount > 0 && (
+					{unreadCount > 0 && (
 						<Badge variant="default" className="rounded-sm">
 							{unreadCount} unread
 						</Badge>
 					)}
 				</div>
-				{!allRead && unreadCount > 0 && (
+				{unreadCount > 0 && (
 					<Button
 						type="button"
 						variant="outline"
 						size="sm"
-						onClick={() => setAllRead(true)}
+						onClick={() => void handleMarkAllRead()}
+						disabled={isMarkingAll}
 					>
-						Mark all read ✓
+						Mark all read
 					</Button>
 				)}
 			</header>
@@ -227,89 +292,50 @@ export default function NotificationsShell() {
 				className="grid grid-cols-1 gap-5 lg:grid-cols-[220px_minmax(0,1fr)]"
 			>
 
-				{/* ── Left rail ── */}
+				{/* Left rail: filters + delivery summary */}
 				<div container-id="notifications-sidebar" className="flex flex-col gap-4">
-
-					{/* Categories */}
 					<Card size="sm">
 						<CardHeader>
-							<CardTitle className="text-sm text-muted-foreground">Categories</CardTitle>
+							<CardTitle className="text-sm text-muted-foreground">Filter</CardTitle>
 						</CardHeader>
 						<CardContent className="flex flex-col gap-0.5">
-							{CATEGORIES.map((cat) => (
+							{(["all", "unread"] as const).map((key) => (
 								<button
-									key={cat.key}
+									key={key}
 									type="button"
-									onClick={() => setCategory(cat.key)}
+									onClick={() => setFilter(key)}
 									className={cn(
 										"flex items-center justify-between rounded-md px-2.5 py-1.5 text-sm transition-colors",
-										category === cat.key
+										filter === key
 											? "bg-foreground text-background font-semibold"
 											: "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
 									)}
 								>
-									<span>{cat.label}</span>
-									<span className="tabular-nums text-xs">{cat.count}</span>
+									<span>{key === "all" ? "All" : "Unread"}</span>
+									<span className="tabular-nums text-xs">
+										{key === "all" ? notifications.length : unreadCount}
+									</span>
 								</button>
 							))}
 						</CardContent>
 					</Card>
-
-					{/* Delivery settings summary */}
-					<Card size="sm">
-						<CardHeader>
-							<CardTitle className="text-sm text-muted-foreground">Delivery</CardTitle>
-						</CardHeader>
-						<CardContent className="flex flex-col gap-2">
-							{[
-								{ label: "Push", on: true },
-								{ label: "Email", on: true },
-								{ label: "SMS", on: false },
-							].map((d) => (
-								<div key={d.label} className="flex items-center justify-between text-sm">
-									<span className="text-muted-foreground">{d.label}</span>
-									<Badge
-										variant={d.on ? "default" : "secondary"}
-										className="rounded-sm text-[9px]"
-									>
-										{d.on ? "on" : "off"}
-									</Badge>
-								</div>
-							))}
-							<Separator />
-							<a
-								href="#"
-								className={cn(
-									buttonVariants({ variant: "ghost", size: "sm" }),
-									"w-full justify-start text-xs",
-								)}
-							>
-								⚙ Settings
-							</a>
-						</CardContent>
-					</Card>
 				</div>
 
-				{/* ── Notification stream ── */}
+				{/* Notification stream */}
 				<div container-id="notifications-feed" className="flex flex-col gap-5">
-					{GROUPS.map(({ key, label }) => {
-						const group = visible.filter((n) => n.group === key);
-						if (group.length === 0) return null;
-						return (
-							<div key={key} className="flex flex-col gap-2">
-								<p className="text-xs font-medium text-muted-foreground">{label}</p>
-								{group.map((notif) => (
-									<NotifRow key={notif.id} notif={notif} />
-								))}
-							</div>
-						);
-					})}
-
-					{visible.length === 0 && (
+					{isEmpty ? (
 						<div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border py-16 text-center">
 							<Bell className="size-8 text-muted-foreground/30" aria-hidden />
-							<p className="text-sm font-medium">No notifications here.</p>
+							<p className="text-sm font-medium">
+								{filter === "unread" ? "No unread notifications." : "You're all caught up!"}
+							</p>
 						</div>
+					) : (
+						<>
+							<DateGroup label="Today" notifications={today} onRead={(id) => void handleMarkRead(id)} />
+							<DateGroup label="Yesterday" notifications={yesterday} onRead={(id) => void handleMarkRead(id)} />
+							<DateGroup label="Earlier" notifications={earlier} onRead={(id) => void handleMarkRead(id)} />
+						</>
 					)}
 				</div>
 			</div>

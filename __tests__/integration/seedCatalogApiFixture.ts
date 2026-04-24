@@ -5,7 +5,7 @@
 // Creates real auth.users + profiles rows and catalog rows via service-role
 // client. Call `cleanupCatalogApiFixture` in afterAll (reverse FK order).
 
-import { getAdmin } from '@/lib/supabase/clients/adminClient'
+import { createAdminSupabaseClient as getAdmin } from '@/lib/supabase/admin'
 
 export type CatalogApiFixture = {
 	adminUserId: string

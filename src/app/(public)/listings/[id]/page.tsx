@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import ListingDetailShell from "./shell";
+import { SimilarListings } from "./_components/similar-listings";
 
 import { getListingDetailPagePayload } from "@/lib/features/listings/services";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -27,6 +28,9 @@ export default async function ListingDetailPage({
 	}
 
 	return (
-		<ListingDetailShell listing={data.listing} images={data.images} sellerReviews={data.sellerReviews} />
+		<div className="flex flex-col gap-12">
+			<ListingDetailShell listing={data.listing} images={data.images} sellerReviews={data.sellerReviews} />
+			<SimilarListings listingId={id} />
+		</div>
 	);
 }

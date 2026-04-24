@@ -1,0 +1,29 @@
+// ============================================================================
+// Admin Dispute Detail Page
+// ============================================================================
+//
+// Async RSC: fetches a single dispute's full detail and passes to shell.
+
+import { notFound, redirect } from "next/navigation";
+
+import { getServerSession } from "@/lib/auth/guards";
+import { getAdminDisputeDetail } from "@/lib/features/admin/services";
+
+import AdminDisputeDetailShell from "./shell";
+
+export default async function AdminDisputeDetailPage({
+	params,
+}: {
+	params: Promise<{ id: string }>;
+}) {
+	const session = await getServerSession();
+	if (!session) redirect("/sign-in");
+	if (!session.roles.includes("admin")) redirect("/403");
+
+	const { id } = await params;
+	const { data, error } = await getAdminDisputeDetail(id);
+
+	if (error || !data) notFound();
+
+	return <AdminDisputeDetailShell dispute={data} />;
+}

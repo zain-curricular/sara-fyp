@@ -1,19 +1,34 @@
-import { notFound } from "next/navigation";
+// ============================================================================
+// Buyer Order Detail Page — RSC
+// ============================================================================
+//
+// Fetches order detail server-side and passes to OrderDetailShell.
+// Redirects unauthenticated users to sign-in.
 
+import { notFound, redirect } from "next/navigation";
+
+import { getServerSession } from "@/lib/auth/guards";
+import { getOrderDetail } from "@/lib/features/orders/services";
 import OrderDetailShell from "./shell";
 
 type PageProps = {
 	params: Promise<{ id: string }>;
 };
 
-const KNOWN_IDS = ["A-9421", "A-9388", "A-9212", "A-9144"];
-
 export default async function BuyerOrderDetailPage({ params }: PageProps) {
-	const { id } = await params;
+	const session = await getServerSession();
+	if (!session) redirect("/sign-in?next=/buyer/orders");
 
-	if (!KNOWN_IDS.includes(id) && !/^[A-Z]-\d+$/.test(id)) {
-		notFound();
+	const { id } = await params;
+	const { data: order, error } = await getOrderDetail(id, session.userId);
+
+	if (error) {
+		const msg = error instanceof Error ? error.message : "Error";
+		if (msg === "Forbidden") notFound();
+		throw new Error("Failed to load order");
 	}
 
-	return <OrderDetailShell orderId={id} />;
+	if (!order) notFound();
+
+	return <OrderDetailShell order={order} />;
 }
