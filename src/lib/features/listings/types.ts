@@ -21,6 +21,8 @@ export type ListingRecord = {
 	created_at: string;
 	updated_at: string;
 	deleted_at: string | null;
+	// Present when the query embeds cover images (e.g. searchListingsPublic).
+	listing_images?: { url: string; position: number }[] | null;
 };
 
 export type ListingImageRecord = {

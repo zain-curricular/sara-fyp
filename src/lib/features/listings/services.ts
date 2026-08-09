@@ -42,7 +42,7 @@ export async function searchListingsPublic(
 
 	let q = supabase
 		.from("listings")
-		.select("*", { count: "exact" })
+		.select("*, listing_images(url, position)", { count: "exact" })
 		.eq("status", "active")
 		.is("deleted_at", null);
 

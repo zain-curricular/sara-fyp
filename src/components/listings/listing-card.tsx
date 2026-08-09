@@ -9,7 +9,9 @@
 //
 
 
+import Image from "next/image";
 import Link from "next/link";
+import { Package } from "lucide-react";
 
 import type { ListingRecord } from "@/lib/features/listings";
 import { FavoriteButton } from "@/components/favorites/favorite-button";
@@ -33,6 +35,10 @@ type ListingCardProps = {
 };
 
 export function ListingCard({ listing, className }: ListingCardProps) {
+	// Cover = lowest-position embedded image, when the query provided them.
+	const images = [...(listing.listing_images ?? [])].sort((a, b) => a.position - b.position);
+	const coverUrl = images[0]?.url ?? null;
+
 	return (
 		<Link
 			href={`/listings/${listing.id}`}
@@ -42,8 +48,22 @@ export function ListingCard({ listing, className }: ListingCardProps) {
 				size="sm"
 				className="h-full overflow-hidden cursor-pointer transition-all group-hover:border-foreground/20 group-hover:bg-accent/40 group-hover:shadow-sm group-focus-visible:ring-2 group-focus-visible:ring-ring"
 			>
-				{/* Image placeholder — flush with card top edge (no padding) */}
-				<div className="aspect-[4/3] w-full bg-muted/30" />
+				{/* Cover image — flush with card top edge (no padding) */}
+				<div className="relative aspect-[4/3] w-full overflow-hidden bg-muted/30">
+					{coverUrl ? (
+						<Image
+							src={coverUrl}
+							alt={listing.title}
+							fill
+							className="object-cover transition-transform duration-300 group-hover:scale-105"
+							sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+						/>
+					) : (
+						<div className="flex h-full items-center justify-center">
+							<Package className="size-6 text-muted-foreground" aria-hidden />
+						</div>
+					)}
+				</div>
 
 				<CardContent className="p-3 flex flex-col gap-2">
 					{/* Badges row: condition always shown, LIVE shown for auction/both */}
