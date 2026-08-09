@@ -210,3 +210,45 @@ path. The admin fraud dashboard now shows real, scored, colour-coded signals.
 **Deferred into Phase 4 (where data is seeded):** embedding backfill + embed-on-
 write (3.3), extended KB + re-embed (3.4). **Deferred as polish:** recommendation
 rails in the homepage UI (3.5) — the endpoints work; no rail consumes them yet.
+
+---
+
+## Phase 4 — Demo data & seeding
+
+One command (`supabase db reset`) fills a fresh DB with a production-feeling
+dataset via `supabase/seed-data/demo.sql` (wired into `config.toml`
+`[db.seed] sql_paths`), generated procedurally in SQL — no external tooling,
+idempotent, seedable any time. **Verified end-to-end on a full reset.**
+
+Volumes: **52 stores** (50 demo, 40+2 approved / 8 pending / 4 rejected),
+**566 listings** (422 active — every one with images — 110 draft, 23
+pending_review, 11 rejected), **303 orders** across every status (122
+completed), **120 payouts**, **122 reviews**, **30 disputes**, **60
+conversations**, **24 mechanic verifications**, **12 fraud signals**, 80 buyers
+(2 banned), 10 mechanics (7 verified). **Money identity holds: 120/120 completed
+orders have `payout.amount == escrow.seller_payout` with escrow released.**
+
+Logins: `sellerN@demo.shopsmart.pk`/`Seller@123`, `buyerN@demo.shopsmart.pk`/
+`Buyer@123`, `mechN@demo.shopsmart.pk`/`Mech@123` (plus the base seed's
+`admin@shopsmart.pk`/`Admin@123`, `seller1/2`, etc.).
+
+**Also fixed:** the `under_review` dispute status used by auto-release was
+invalid (valid value is `reviewing`) — corrected in the commerce migration + edge
+function.
+
+### Known issue found while seeding
+The mechanic service (`mechanic/services.ts`) queries a **nonexistent table
+`verification_requests`** — the real table is `mechanic_verifications` (different
+schema: `requester_id`, `mechanic_notes`, `fee`, `paid`; no `verdict`/
+`buyer_notes`). The seed populates `mechanic_verifications` (24 rows), but the
+mechanic list/accept/verdict flows (incl. the Phase 2.6 edits) need the service
+reconciled to the real table — a documented follow-up.
+
+### Deliberate deviations (flag for the viva)
+- **Images use car-themed CDN URLs** (loremflickr / pravatar, deterministic
+  `?lock=`) referenced in `listing_images.url`, not uploaded into Supabase
+  Storage. Real and reliable, but needs internet at demo time; Storage upload is
+  a documented follow-up.
+- **Embeddings not backfilled** — `listings.embedding` is NULL, so vector search
+  / recommendations use their SQL/keyword fallbacks (which work). Backfill needs
+  a one-time OpenAI run (documented).

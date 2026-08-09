@@ -120,7 +120,7 @@ begin
 			and o.delivered_at < now() - interval '7 days'
 			and not exists (
 				select 1 from public.disputes d
-				where d.order_id = o.id and d.status in ('open', 'under_review')
+				where d.order_id = o.id and d.status in ('open', 'reviewing')
 			)
 	loop
 		update public.orders

@@ -40,7 +40,7 @@ Deno.serve(async (_req) => {
 			.from("disputes")
 			.select("id", { count: "exact", head: true })
 			.eq("order_id", order.id)
-			.in("status", ["open", "under_review"]);
+			.in("status", ["open", "reviewing"]);
 
 		if ((count ?? 0) > 0) continue;
 
