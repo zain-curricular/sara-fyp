@@ -32,7 +32,7 @@ import { formatPKR } from "@/lib/utils/currency";
 import type { Order, OrderStatus } from "@/lib/features/orders/types";
 import { shipOrderSchema } from "@/lib/features/orders/schemas";
 import type { ShipOrderInput } from "@/lib/features/orders/schemas";
-import { useAcceptOrder, useShipOrder } from "@/lib/features/orders/hooks";
+import { useAcceptOrder, useMarkDelivered, useShipOrder } from "@/lib/features/orders/hooks";
 
 // ----------------------------------------------------------------------------
 // Props
@@ -57,6 +57,14 @@ const STATUS_BADGE: Record<OrderStatus, { label: string; variant: "default" | "s
 	refunded: { label: "Refunded", variant: "secondary" },
 	cancelled: { label: "Cancelled", variant: "outline" },
 };
+
+/** Current escrow state derived from the order status (escrow tracks the order). */
+function escrowState(status: OrderStatus): { label: string; tone: "held" | "released" | "refunded" } {
+	if (status === "completed") return { label: "Released to you", tone: "released" };
+	if (status === "refunded" || status === "cancelled") return { label: "Refunded to buyer", tone: "refunded" };
+	if (status === "disputed") return { label: "Held — in dispute", tone: "held" };
+	return { label: "Held in escrow", tone: "held" };
+}
 
 // ----------------------------------------------------------------------------
 // Ship form
@@ -134,12 +142,16 @@ function ShipForm({ orderId, onDone }: ShipFormProps) {
 
 export default function SellerOrderDetailShell({ order }: SellerOrderDetailShellProps) {
 	const acceptOrder = useAcceptOrder();
+	const markDelivered = useMarkDelivered();
 	const [showShipForm, setShowShipForm] = useState(false);
 	const [acceptError, setAcceptError] = useState<string | null>(null);
+	const [deliverError, setDeliverError] = useState<string | null>(null);
 
 	const badge = STATUS_BADGE[order.ssStatus];
+	const escrow = escrowState(order.ssStatus);
 	const showAccept = order.ssStatus === "paid_escrow";
 	const showShip = order.ssStatus === "accepted";
+	const showDeliver = order.ssStatus === "shipped";
 	const showShippingAddress =
 		order.ssStatus !== "pending_payment" && order.ssStatus !== "paid_escrow";
 
@@ -149,6 +161,15 @@ export default function SellerOrderDetailShell({ order }: SellerOrderDetailShell
 			await acceptOrder.mutateAsync({ orderId: order.id });
 		} catch (e) {
 			setAcceptError(e instanceof Error ? e.message : "Failed to accept order");
+		}
+	}
+
+	async function handleDeliver() {
+		setDeliverError(null);
+		try {
+			await markDelivered.mutateAsync({ orderId: order.id });
+		} catch (e) {
+			setDeliverError(e instanceof Error ? e.message : "Failed to mark delivered");
 		}
 	}
 
@@ -303,6 +324,16 @@ export default function SellerOrderDetailShell({ order }: SellerOrderDetailShell
 								</span>
 							</div>
 
+							<div className="mt-1 flex items-center justify-between">
+								<span className="text-xs text-muted-foreground">Escrow</span>
+								<Badge
+									variant={escrow.tone === "released" ? "default" : "secondary"}
+									className="rounded-sm text-[10px]"
+								>
+									{escrow.label}
+								</Badge>
+							</div>
+
 							<p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
 								You receive {formatPKR(order.subtotal)} after platform fee deduction,
 								released when buyer confirms receipt.
@@ -336,6 +367,22 @@ export default function SellerOrderDetailShell({ order }: SellerOrderDetailShell
 							>
 								Mark as shipped
 							</Button>
+						)}
+
+						{showDeliver && (
+							<>
+								<Button
+									type="button"
+									className="w-full"
+									disabled={markDelivered.isPending}
+									onClick={handleDeliver}
+								>
+									{markDelivered.isPending ? "Marking delivered…" : "Mark as delivered"}
+								</Button>
+								{deliverError && (
+									<p className="text-xs text-destructive">{deliverError}</p>
+								)}
+							</>
 						)}
 
 						{order.trackingNumber && (

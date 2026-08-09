@@ -29,6 +29,7 @@ import { formatPKR } from "@/lib/utils/currency";
 
 import type { SellerGroup } from "@/lib/features/cart/types";
 import { usePlaceOrder } from "@/lib/features/orders/hooks";
+import { defaultInstrument, TEST_CARD_SUCCESS, TEST_CARD_DECLINE } from "@/lib/payments";
 
 // ----------------------------------------------------------------------------
 // Props
@@ -68,9 +69,9 @@ type PaymentMethod = "cod" | "jazzcash" | "easypaisa" | "card";
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string; desc: string }[] = [
 	{ value: "cod", label: "Cash on Delivery", desc: "Pay when your order arrives" },
-	{ value: "jazzcash", label: "JazzCash", desc: "Redirect to JazzCash payment gateway" },
-	{ value: "easypaisa", label: "EasyPaisa", desc: "Redirect to EasyPaisa payment gateway" },
-	{ value: "card", label: "Card", desc: "Debit / credit card via secure gateway" },
+	{ value: "jazzcash", label: "JazzCash", desc: "Mobile wallet (sandbox)" },
+	{ value: "easypaisa", label: "EasyPaisa", desc: "Mobile wallet (sandbox)" },
+	{ value: "card", label: "Card", desc: "Debit / credit card via Stripe test mode" },
 ];
 
 // ----------------------------------------------------------------------------
@@ -129,6 +130,7 @@ export default function CheckoutShell({ groups }: CheckoutShellProps) {
 	const [step, setStep] = useState<Step>("shipping");
 	const [address, setAddress] = useState<AddressFormData | null>(null);
 	const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
+	const [instrument, setInstrument] = useState<string>("");
 	const [placingError, setPlacingError] = useState<string | null>(null);
 
 	const placeOrder = usePlaceOrder();
@@ -163,6 +165,7 @@ export default function CheckoutShell({ groups }: CheckoutShellProps) {
 				shippingAddressId: null,
 				shippingAddress: address,
 				paymentMethod,
+				paymentInstrument: instrument,
 			});
 		}
 		// usePlaceOrder redirects to success page on the last order
@@ -276,7 +279,10 @@ export default function CheckoutShell({ groups }: CheckoutShellProps) {
 											name="paymentMethod"
 											value={method.value}
 											checked={paymentMethod === method.value}
-											onChange={() => setPaymentMethod(method.value)}
+											onChange={() => {
+												setPaymentMethod(method.value);
+												setInstrument(defaultInstrument(method.value));
+											}}
 											className="mt-0.5 shrink-0"
 										/>
 										<div className="flex flex-col gap-0.5">
@@ -284,12 +290,33 @@ export default function CheckoutShell({ groups }: CheckoutShellProps) {
 											<span className="text-xs text-muted-foreground">{method.desc}</span>
 											{method.value !== "cod" && (
 												<Badge variant="secondary" className="mt-1 w-fit rounded-sm text-[9px]">
-													Coming soon
+													{method.value === "card" ? "Card · test mode" : "Sandbox"}
 												</Badge>
 											)}
 										</div>
 									</label>
 								))}
+
+								{/* Test instrument — card number or wallet number */}
+								{paymentMethod !== "cod" && (
+									<div className="flex flex-col gap-1.5 rounded-lg border border-dashed border-border p-3">
+										<Label htmlFor="pay-instrument" className="text-xs">
+											{paymentMethod === "card" ? "Card number" : "Mobile wallet number"}
+										</Label>
+										<Input
+											id="pay-instrument"
+											value={instrument}
+											onChange={(e) => setInstrument(e.target.value)}
+											placeholder={paymentMethod === "card" ? "4242 4242 4242 4242" : "03001234567"}
+											inputMode="numeric"
+										/>
+										<p className="text-[11px] leading-relaxed text-muted-foreground">
+											{paymentMethod === "card"
+												? `Test mode — ${TEST_CARD_SUCCESS} succeeds, ${TEST_CARD_DECLINE} declines.`
+												: "Sandbox — any number works; one ending in 00 is declined."}
+										</p>
+									</div>
+								)}
 
 								<div className="flex gap-3 pt-2">
 									<Button
@@ -302,7 +329,6 @@ export default function CheckoutShell({ groups }: CheckoutShellProps) {
 									<Button
 										type="button"
 										onClick={() => setStep("review")}
-										disabled={paymentMethod !== "cod"}
 									>
 										Review order →
 									</Button>

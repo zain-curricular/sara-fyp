@@ -62,6 +62,11 @@ Deno.serve(async (_req) => {
 			.eq("order_id", order.id)
 			.eq("ss_status", "held");
 
+		// Generate the seller payout (idempotent on order_id). Keeps this edge
+		// function consistent with the canonical SQL auto_release_escrow() that
+		// pg_cron runs — either path produces the same money movement.
+		await supabase.rpc("create_payout_for_order", { p_order_id: order.id });
+
 		released++;
 	}
 

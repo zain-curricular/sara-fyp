@@ -43,6 +43,13 @@ function formatDateRange(start: string, end: string): string {
 // ----------------------------------------------------------------------------
 
 export default function PayoutsShell({ payouts }: { payouts: PayoutRecord[] }) {
+	const pendingTotal = payouts
+		.filter((p) => p.status === "pending" || p.status === "processing")
+		.reduce((sum, p) => sum + p.amount, 0);
+	const paidTotal = payouts
+		.filter((p) => p.status === "paid")
+		.reduce((sum, p) => sum + p.amount, 0);
+
 	return (
 		<div container-id="payouts-shell" className="flex flex-col gap-6">
 
@@ -63,6 +70,25 @@ export default function PayoutsShell({ payouts }: { payouts: PayoutRecord[] }) {
 					Payout settings
 				</Link>
 			</header>
+
+			{payouts.length > 0 && (
+				<div container-id="payouts-totals" className="grid grid-cols-2 gap-3">
+					<Card size="sm">
+						<CardContent className="flex flex-col gap-1 pt-4">
+							<p className="text-xs text-muted-foreground">Pending</p>
+							<p className="text-xl font-bold tabular-nums text-primary">
+								{formatPKR(pendingTotal)}
+							</p>
+						</CardContent>
+					</Card>
+					<Card size="sm">
+						<CardContent className="flex flex-col gap-1 pt-4">
+							<p className="text-xs text-muted-foreground">Paid out</p>
+							<p className="text-xl font-bold tabular-nums">{formatPKR(paidTotal)}</p>
+						</CardContent>
+					</Card>
+				</div>
+			)}
 
 			{payouts.length === 0 ? (
 				<div

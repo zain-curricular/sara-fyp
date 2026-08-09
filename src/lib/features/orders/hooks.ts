@@ -158,6 +158,26 @@ export function useAcceptOrder() {
 	});
 }
 
+/** Seller marks a shipped order as delivered (shipped → delivered). */
+export function useMarkDelivered() {
+	const authFetch = useAuthenticatedFetch();
+	const qc = useQueryClient();
+
+	return useMutation<void, Error, { orderId: string }>({
+		mutationFn: async ({ orderId }) => {
+			const res = await authFetch<{ ok: true } | { ok: false; error: string }>(
+				`/api/orders/${encodeURIComponent(orderId)}/deliver`,
+				{ method: "POST" },
+			);
+			if (!res.ok) throw new Error("error" in res ? res.error : "Failed to mark delivered");
+		},
+		onSuccess: (_data, { orderId }) => {
+			void qc.invalidateQueries({ queryKey: orderKeys.detail(orderId) });
+			void qc.invalidateQueries({ queryKey: orderKeys.sellerList() });
+		},
+	});
+}
+
 /** Seller marks order as shipped with tracking info. */
 export function useShipOrder() {
 	const authFetch = useAuthenticatedFetch();

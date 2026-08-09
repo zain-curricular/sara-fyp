@@ -24,6 +24,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { clearCartItems } from "@/lib/features/cart/services";
 import { generateOrderNumber } from "@/lib/utils/order-number";
+import { processPayment } from "@/lib/payments/services";
 
 import type { Order, OrderItem, OrderStatus, OrderStatusEvent } from "@/lib/features/orders/types";
 import type { PlaceOrderInput } from "@/lib/features/orders/schemas";
@@ -72,7 +73,7 @@ function mapOrderRow(
 		shippingAddress: row.shipping_address as Order["shippingAddress"],
 		trackingNumber: (row.tracking_number as string | null) ?? null,
 		courierName: (row.courier_name as string | null) ?? null,
-		paymentMethod: "cod",
+		paymentMethod: (row.payment_method as string | null) ?? "cod",
 		placedAt: row.placed_at as string,
 		acceptedAt: (row.accepted_at as string | null) ?? null,
 		shippedAt: (row.shipped_at as string | null) ?? null,
@@ -244,6 +245,19 @@ export async function placeOrder(
 	const platformFee = Math.round(subtotal * 0.03); // 3%
 	const total = subtotal + shippingFee + platformFee;
 
+	// 4.5 — Process payment through the payments seam (Stripe test mode when
+	//.. STRIPE_SECRET_KEY is set, otherwise the deterministic sandbox). COD is
+	//.. pay-on-delivery. On decline we return BEFORE any order/escrow row is
+	//.. created, so a failed payment leaves no order behind.
+	const payment = await processPayment({
+		method: payload.paymentMethod,
+		amount: total,
+		instrument: payload.paymentInstrument,
+	});
+	if (!payment.ok) {
+		return { data: null, error: new Error(payment.reason) };
+	}
+
 	// 5 — Generate order number using a sequence approach
 	const { count } = await admin
 		.from("orders")
@@ -265,6 +279,8 @@ export async function placeOrder(
 			seller_id: payload.cartGroupSellerId,
 			store_id: storeId,
 			ss_status: "pending_payment",
+			payment_method: payload.paymentMethod,
+			payment_ref: payment.ref,
 			subtotal,
 			shipping_fee: shippingFee,
 			platform_fee: platformFee,
@@ -317,21 +333,24 @@ export async function placeOrder(
 		note: "Order placed",
 	});
 
-	// 10 — For COD: auto-transition to paid_escrow
-	if (payload.paymentMethod === "cod") {
-		await admin
-			.from("orders")
-			.update({ ss_status: "paid_escrow" })
-			.eq("id", orderId);
+	// 10 — Payment succeeded → move to paid_escrow (funds held in escrow). COD is
+	//.. collected on delivery, but the order still proceeds into escrow so the
+	//.. rest of the lifecycle is identical across methods.
+	await admin
+		.from("orders")
+		.update({ ss_status: "paid_escrow", paid_at: new Date().toISOString() })
+		.eq("id", orderId);
 
-		await admin.from("order_status_events").insert({
-			order_id: orderId,
-			from_status: "pending_payment",
-			to_status: "paid_escrow",
-			actor_id: buyerId,
-			note: "COD — payment confirmed on delivery",
-		});
-	}
+	await admin.from("order_status_events").insert({
+		order_id: orderId,
+		from_status: "pending_payment",
+		to_status: "paid_escrow",
+		actor_id: buyerId,
+		note:
+			payload.paymentMethod === "cod"
+				? "COD — payment collected on delivery"
+				: `Payment received via ${payload.paymentMethod} (${payment.provider})`,
+	});
 
 	// 11 — Create escrow transaction (held).
 	//.. Ledger identity (INDEX §9): seller_payout + platform_fee == amount(total).
@@ -343,6 +362,7 @@ export async function placeOrder(
 		type: "hold",
 		amount: total,
 		payment_method: payload.paymentMethod,
+		external_tx_id: payment.ref,
 		ss_status: "held",
 		seller_payout: total - platformFee,
 		release_trigger: "buyer_confirmation",
@@ -362,6 +382,19 @@ export async function placeOrder(
 		entityId: orderId,
 	});
 
+	// 14 — Notify buyer their payment landed in escrow (COD is collected on
+	//.. delivery, so it gets no "payment received" ping).
+	if (payload.paymentMethod !== "cod") {
+		await sendNotification(admin, {
+			userId: buyerId,
+			type: "payment_received",
+			title: "Payment received",
+			body: `Your payment for order ${orderNumber} is held safely in escrow.`,
+			entityType: "order",
+			entityId: orderId,
+		});
+	}
+
 	return { data: { orderId, orderNumber }, error: null };
 }
 
@@ -377,7 +410,7 @@ export async function getOrdersForBuyer(
 		.select(
 			`
 			id, order_number, buyer_id, seller_id, store_id,
-			ss_status, subtotal, shipping_fee, platform_fee, total,
+			ss_status, payment_method, subtotal, shipping_fee, platform_fee, total,
 			shipping_address, tracking_number, courier_name,
 			placed_at, accepted_at, shipped_at, delivered_at, completed_at,
 			seller_stores (store_name, slug)
@@ -423,7 +456,7 @@ export async function getOrdersForSeller(
 		.select(
 			`
 			id, order_number, buyer_id, seller_id, store_id,
-			ss_status, subtotal, shipping_fee, platform_fee, total,
+			ss_status, payment_method, subtotal, shipping_fee, platform_fee, total,
 			shipping_address, tracking_number, courier_name,
 			placed_at, accepted_at, shipped_at, delivered_at, completed_at,
 			seller_stores (store_name, slug)
@@ -472,7 +505,7 @@ export async function getOrderDetail(
 		.select(
 			`
 			id, order_number, buyer_id, seller_id, store_id,
-			ss_status, subtotal, shipping_fee, platform_fee, total,
+			ss_status, payment_method, subtotal, shipping_fee, platform_fee, total,
 			shipping_address, tracking_number, courier_name,
 			placed_at, accepted_at, shipped_at, delivered_at, completed_at,
 			seller_stores (store_name, slug)
@@ -610,6 +643,10 @@ export async function confirmReceipt(
 		.from("escrow_transactions")
 		.update({ ss_status: "released", released_at: new Date().toISOString() })
 		.eq("order_id", orderId);
+
+	// Generate the seller's payout row for this released order. Idempotent on
+	// order_id (the DB function no-ops if a payout already exists).
+	await admin.rpc("create_payout_for_order", { p_order_id: orderId });
 
 	return { error: null };
 }

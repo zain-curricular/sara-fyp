@@ -1578,6 +1578,8 @@ export type Database = {
           listing_id: string | null
           order_number: string | null
           paid_at: string | null
+          payment_method: string
+          payment_ref: string | null
           placed_at: string | null
           platform_fee: number
           received_at_center_at: string | null
@@ -1614,6 +1616,8 @@ export type Database = {
           listing_id?: string | null
           order_number?: string | null
           paid_at?: string | null
+          payment_method?: string
+          payment_ref?: string | null
           placed_at?: string | null
           platform_fee?: number
           received_at_center_at?: string | null
@@ -1650,6 +1654,8 @@ export type Database = {
           listing_id?: string | null
           order_number?: string | null
           paid_at?: string | null
+          payment_method?: string
+          payment_ref?: string | null
           placed_at?: string | null
           platform_fee?: number
           received_at_center_at?: string | null
@@ -1771,6 +1777,7 @@ export type Database = {
           created_at: string
           id: string
           method: string | null
+          order_id: string | null
           paid_at: string | null
           period_end: string
           period_start: string
@@ -1783,6 +1790,7 @@ export type Database = {
           created_at?: string
           id?: string
           method?: string | null
+          order_id?: string | null
           paid_at?: string | null
           period_end: string
           period_start: string
@@ -1795,6 +1803,7 @@ export type Database = {
           created_at?: string
           id?: string
           method?: string | null
+          order_id?: string | null
           paid_at?: string | null
           period_end?: string
           period_start?: string
@@ -1803,6 +1812,20 @@ export type Database = {
           transaction_ref?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "payouts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "order_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payouts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payouts_seller_id_fkey"
             columns: ["seller_id"]
@@ -2891,11 +2914,16 @@ export type Database = {
         }
         Returns: Json
       }
+      auto_release_escrow: { Args: never; Returns: number }
       complete_subscription_escrow: {
         Args: { p_escrow_id: string; p_external_tx_id: string }
         Returns: Json
       }
       create_buy_now_order: { Args: { p_listing_id: string }; Returns: Json }
+      create_payout_for_order: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
       create_warranty_claim_atomic: {
         Args: {
           p_claimant_id: string
@@ -3029,6 +3057,10 @@ export type Database = {
         | "review_received"
         | "listing_approved"
         | "listing_flagged"
+        | "payment_received"
+        | "order_delivered"
+        | "escrow_released"
+        | "payout_paid"
       order_status:
         | "awaiting_payment"
         | "payment_received"
@@ -3220,6 +3252,10 @@ export const Constants = {
         "review_received",
         "listing_approved",
         "listing_flagged",
+        "payment_received",
+        "order_delivered",
+        "escrow_released",
+        "payout_paid",
       ],
       order_status: [
         "awaiting_payment",

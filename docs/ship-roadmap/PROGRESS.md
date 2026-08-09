@@ -72,3 +72,63 @@ dispute resolution maps the winner to a CHECK-valid escrow state
 **Still dark (by design, later phases):** payment gateway (P1.1), `delivered`
 transition (P1.2), payout row generation (P1.4), fraud worker rewrite +
 scheduling (P3.6), embedding backfill (P3.3).
+
+---
+
+## Phase 1 — Commerce core: payments, delivery, escrow, payouts
+
+The proposal's flagship flow now runs end-to-end live. Verified: `supabase db
+reset` clean (migration `20260809000003_commerce_lifecycle.sql`), `tsc` green,
+Phase 1 files lint-clean, and DB functional checks pass — the money identity
+holds (`payout.amount == escrow.seller_payout`, idempotent) and a backdated
+delivered order is auto-completed (escrow released + payout + notification).
+
+> **Payments decision update (supersedes INDEX §8.2):** the seam supports BOTH a
+> deterministic in-repo sandbox AND real **Stripe test mode**. Card routes to
+> Stripe (server-side PaymentIntents confirmed with test PaymentMethods — no
+> redirect/webhook/Stripe CLI) when `STRIPE_SECRET_KEY` is set, and to the
+> sandbox otherwise; JazzCash/EasyPaisa are always sandbox; COD is
+> pay-on-delivery. The user will add `sk_test_`/`pk_test_` keys after all phases.
+
+### 1.1 — Payments seam
+New `src/lib/payments/` module (client barrel + server barrel + `_stripe`/
+`_sandbox` adapters, `cardProvider()` reporter). `placeOrder` processes payment
+*before* any order/escrow row is created (declines leave nothing behind),
+persists `payment_method` + `payment_ref`, and records the ref on escrow's
+`external_tx_id`. Checkout enables all four methods with a test-instrument input
+(4242 succeeds / 4000…0002 declines; wallet ending 00 fails) and a live/sandbox
+badge. Migration adds `orders.payment_method`/`payment_ref` and `cod`/`card` to
+the payment_method enum (P0).
+
+### 1.2 — Delivery leg
+New `POST /api/orders/[id]/deliver` (seller-owned, guarded `shipped → delivered`
+through the state machine), `useMarkDelivered` hook, and a "Mark as delivered"
+button on shipped orders. The buyer's confirm-receipt CTA is now reachable and
+the 7-day auto-release can pick orders up.
+
+### 1.3 — Escrow correctness + chip
+Escrow ledger writes (fixed in P0) are exercised end-to-end; both order-detail
+shells show a derived escrow-state chip (Held / Released / Refunded).
+
+### 1.4 — Payout generation & completion
+`create_payout_for_order()` (single source of truth, idempotent on `order_id`)
+is called on confirm-receipt, seller-win dispute, and auto-release. The admin
+payout batch now settles pending/processing → **paid** with a batch ref + notifies
+each seller; the seller payouts page shows pending/paid totals. Migration adds
+`payouts.order_id` + unique index.
+
+### 1.5 — Auto-release cron
+`auto_release_escrow()` SQL function (completes delivered-8-days orders with no
+open dispute → release escrow + payout + notify) scheduled daily at 03:00 via
+pg_cron (verified active). The edge function also creates payouts so both paths
+match.
+
+### 1.6 — Commerce notifications
+Enum members `payment_received`, `order_delivered`, `escrow_released`,
+`payout_paid` added; buyer is pinged on payment, seller on auto-release and
+payout. Delivery uses the existing status-change notification.
+
+**Env note:** the local Supabase stack was moved to **55xxx ports** (config.toml
++ `.env`) so it coexists with the user's other Supabase project on the default
+ports. Stripe test keys (`STRIPE_SECRET_KEY`, optional `STRIPE_CURRENCY`) go in
+`.env` when available.

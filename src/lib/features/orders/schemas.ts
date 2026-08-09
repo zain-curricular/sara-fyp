@@ -23,6 +23,9 @@ export const placeOrderSchema = z.object({
 	shippingAddressId: z.string().uuid().nullable().optional(),
 	shippingAddress: shippingAddressSchema.nullable(),
 	paymentMethod: z.enum(["cod", "jazzcash", "easypaisa", "card"]),
+	// Card number (card) or mobile-wallet number (jazzcash/easypaisa). Ignored
+	// for COD. Drives the sandbox / Stripe test-mode outcome. Not persisted.
+	paymentInstrument: z.string().max(40).optional(),
 });
 
 /** POST /api/orders/[id]/ship — seller marks order shipped */

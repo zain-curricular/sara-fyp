@@ -52,6 +52,14 @@ const STATUS_META: Record<OrderStatus, { label: string; variant: "default" | "se
 	cancelled: { label: "Cancelled", variant: "outline" },
 };
 
+/** Current escrow state derived from the order status (escrow tracks the order). */
+function escrowState(status: OrderStatus): { label: string; tone: "held" | "released" | "refunded" } {
+	if (status === "completed") return { label: "Released to seller", tone: "released" };
+	if (status === "refunded" || status === "cancelled") return { label: "Refunded to buyer", tone: "refunded" };
+	if (status === "disputed") return { label: "Held — in dispute", tone: "held" };
+	return { label: "Held in escrow", tone: "held" };
+}
+
 // ----------------------------------------------------------------------------
 // Timeline
 // ----------------------------------------------------------------------------
@@ -193,6 +201,7 @@ export default function OrderDetailShell({ order }: OrderDetailShellProps) {
 	const confirmReceipt = useConfirmReceipt();
 	const statusMeta = STATUS_META[order.ssStatus];
 	const timeline = buildTimeline(order);
+	const escrow = escrowState(order.ssStatus);
 
 	const firstItem = order.items[0];
 	const titleSummary = firstItem?.listingSnapshot.title ?? "Order";
@@ -368,15 +377,24 @@ export default function OrderDetailShell({ order }: OrderDetailShellProps) {
 						</CardContent>
 					</Card>
 
-					{/* Escrow trust */}
+					{/* Escrow trust + current state */}
 					<Card size="sm" className="border-primary/20 bg-primary/5">
 						<CardContent className="flex gap-3 pt-4">
 							<ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
-							<div className="flex flex-col gap-1">
-								<p className="text-sm font-semibold">Escrow protected</p>
+							<div className="flex flex-col gap-1.5">
+								<div className="flex flex-wrap items-center gap-2">
+									<p className="text-sm font-semibold">Escrow protected</p>
+									<Badge
+										variant={escrow.tone === "held" ? "secondary" : "default"}
+										className="rounded-sm text-[10px]"
+									>
+										{escrow.label}
+									</Badge>
+								</div>
 								<p className="text-xs leading-relaxed text-muted-foreground">
-									Your money is held securely. You have{" "}
-									<strong>14 days after delivery</strong> to approve or open a dispute.
+									Your money is held securely. If you don't confirm receipt, escrow{" "}
+									<strong>auto-releases 7 days after delivery</strong>. You can approve or open a
+									dispute before then.
 								</p>
 							</div>
 						</CardContent>

@@ -934,6 +934,11 @@ export async function resolveDispute(
 		.update(escrowUpdate)
 		.eq("order_id", orderId);
 
+	// A seller-win dispute releases escrow → generate their payout (idempotent).
+	if (resolution === "resolved_seller") {
+		await supabase.rpc("create_payout_for_order", { p_order_id: orderId });
+	}
+
 	await supabase.from("admin_actions").insert({
 		admin_id: adminId,
 		target_type: "dispute",
@@ -1357,23 +1362,47 @@ export async function listAdminPayouts(): Promise<{ data: AdminPayout[]; error: 
 export async function runPayoutBatch(adminId: string): Promise<{ data: { count: number } | null; error: unknown }> {
 	const supabase = createAdminSupabaseClient();
 
+	// Settle every outstanding payout: pending/processing -> paid, with a shared
+	// batch reference + timestamp (sandbox settlement — a real gateway adapter
+	// would replace this with per-transfer refs).
+	const batchRef = `batch_${Date.now().toString(36)}`;
 	const { data, error } = await supabase
 		.from("payouts")
-		.update({ status: "processing" })
-		.eq("status", "pending")
-		.select("id");
+		.update({
+			status: "paid",
+			paid_at: new Date().toISOString(),
+			transaction_ref: batchRef,
+			method: "bank_transfer",
+		})
+		.in("status", ["pending", "processing"])
+		.select("id, seller_id, amount");
 
 	if (error) return { data: null, error };
 
-	const count = (data ?? []).length;
+	const paid = (data ?? []) as Array<{ id: string; seller_id: string; amount: number }>;
+	const count = paid.length;
+
+	// Notify each seller their earnings were paid out.
+	if (count > 0) {
+		await supabase.from("notifications").insert(
+			paid.map((p) => ({
+				user_id: p.seller_id,
+				type: "payout_paid",
+				title: "Payout sent",
+				body: `Your payout of PKR ${Math.round(p.amount).toLocaleString("en-US")} has been sent (ref ${batchRef}).`,
+				entity_type: "payout",
+				entity_id: p.id,
+			})),
+		);
+	}
 
 	await supabase.from("admin_actions").insert({
 		admin_id: adminId,
-		target_type: "payouts",
 		// target_id is a uuid column; a batch run has no single target.
+		target_type: "payouts",
 		target_id: null,
 		action_type: "run_payout_batch",
-		note: `Processed ${count} payouts`,
+		note: `Paid ${count} payouts (ref ${batchRef})`,
 	});
 
 	return { data: { count }, error: null };
