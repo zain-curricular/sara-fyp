@@ -95,15 +95,23 @@ export async function getOrCreateConversation(
 // List conversations for a user
 // ----------------------------------------------------------------------------
 
-/** Returns all conversations for a user (as buyer or seller), newest-first. */
+/**
+ * Returns EVERY conversation the user participates in — as buyer OR seller —
+ * newest-first. A single account can be on the buyer side of some threads and
+ * the seller side of others (sellers buy too), so the inbox must not be scoped
+ * to one role: scoping to `buyer_id` alone left sellers with an empty inbox even
+ * while their unread badge was non-zero. The "other party" is resolved per row
+ * (whichever side the caller is NOT on); the shell already derives unread/role
+ * per conversation from `buyerId === currentUserId`.
+ */
 export async function listConversations(
 	userId: string,
-	role: "buyer" | "seller",
 ): Promise<{ data: Conversation[] | null; error: unknown }> {
 	const supabase = await createServerSupabaseClient();
 
-	const column = role === "buyer" ? "buyer_id" : "seller_id";
-	const otherColumn = role === "buyer" ? "seller_id" : "buyer_id";
+	// Per-row helper: the counterparty is the side the caller does not occupy.
+	const otherPartyOf = (row: { buyer_id: unknown; seller_id: unknown }) =>
+		(row.buyer_id === userId ? row.seller_id : row.buyer_id) as string;
 
 	const { data, error } = await supabase
 		.from("conversations")
@@ -118,7 +126,7 @@ export async function listConversations(
 			unread_count_buyer,
 			unread_count_seller
 		`)
-		.eq(column, userId)
+		.or(`buyer_id.eq.${userId},seller_id.eq.${userId}`)
 		.order("last_message_at", { ascending: false })
 		.limit(50);
 
@@ -131,17 +139,20 @@ export async function listConversations(
 	}
 
 	// Collect other-party IDs and listing IDs for batch fetching
-	const otherPartyIds = [...new Set(data.map((row) => row[otherColumn as keyof typeof row] as string))];
+	const otherPartyIds = [...new Set(data.map((row) => otherPartyOf(row)))];
 	const listingIds = [...new Set(data.filter((row) => row.listing_id).map((row) => row.listing_id as string))];
 
-	// Batch-fetch other party profiles
+	// Batch-fetch other party profiles. The app-wide display name lives in
+	// `display_name`; `full_name` is only populated for a handful of base
+	// accounts (null for the generated demo users), so prefer display_name and
+	// fall back to full_name — otherwise every conversation reads "Unknown".
 	const { data: profiles } = await supabase
 		.from("profiles")
-		.select("id, full_name, avatar_url")
+		.select("id, display_name, full_name, avatar_url")
 		.in("id", otherPartyIds);
 
 	const profileMap = new Map(
-		(profiles ?? []).map((p) => [p.id as string, p as { id: string; full_name: string | null; avatar_url: string | null }]),
+		(profiles ?? []).map((p) => [p.id as string, p as { id: string; display_name: string | null; full_name: string | null; avatar_url: string | null }]),
 	);
 
 	// Batch-fetch listings if any
@@ -158,7 +169,7 @@ export async function listConversations(
 	}
 
 	const conversations: Conversation[] = data.map((row) => {
-		const otherPartyId = row[otherColumn as keyof typeof row] as string;
+		const otherPartyId = otherPartyOf(row);
 		const profile = profileMap.get(otherPartyId);
 		const listing = row.listing_id ? listingMap.get(row.listing_id as string) : undefined;
 
@@ -174,7 +185,7 @@ export async function listConversations(
 			sellerUnreadCount: (row.unread_count_seller as number) ?? 0,
 			otherParty: {
 				id: otherPartyId,
-				fullName: profile?.full_name ?? "Unknown",
+				fullName: profile?.display_name ?? profile?.full_name ?? "Unknown",
 				avatarUrl: profile?.avatar_url ?? null,
 			},
 			listing,

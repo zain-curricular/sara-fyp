@@ -22,8 +22,9 @@ export default async function MessagesPage() {
 		redirect("/login?next=/messages");
 	}
 
-	// Determine role: try buyer first; shell can switch via query param
-	const { data: conversations } = await listConversations(session.userId, "buyer");
+	// Every conversation the user is in, buyer- or seller-side — the shell derives
+	// role and unread count per row from the current user id.
+	const { data: conversations } = await listConversations(session.userId);
 
 	return (
 		<MessagesShell

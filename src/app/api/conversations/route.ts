@@ -14,14 +14,13 @@ import { authenticateRequest } from "@/lib/auth/guards";
 import { startConversationSchema } from "@/lib/features/messaging/schemas";
 import { getOrCreateConversation, listConversations } from "@/lib/features/messaging/services";
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export async function GET(): Promise<NextResponse> {
 	const auth = await authenticateRequest();
 	if (!auth.ok) return auth.error;
 
-	const { searchParams } = request.nextUrl;
-	const role = searchParams.get("role") === "seller" ? "seller" : "buyer";
-
-	const { data, error } = await listConversations(auth.userId, role);
+	// Lists every conversation the caller is in (buyer- or seller-side); the
+	// client derives role per conversation. No `role` param needed.
+	const { data, error } = await listConversations(auth.userId);
 
 	if (error) {
 		console.error("[GET /api/conversations]", error);
