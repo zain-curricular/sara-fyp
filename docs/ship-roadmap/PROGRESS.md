@@ -9,6 +9,43 @@ Roadmap: [INDEX.md](INDEX.md). Grounding date: 2026-08-09.
 
 ---
 
+## ✅ FINAL OVERALL SUMMARY — all 6 phases shipped
+
+ShopSmart went from "85% built, core flows 500-ing" to a demoable, production-
+feeling marketplace, all landed on `main`.
+
+**What works end to end:** browse → add to cart → checkout (COD / sandbox
+wallets / Card via **Stripe test mode or sandbox**) → escrow held → seller
+accept → ship → **deliver** → buyer confirm → **escrow released → payout** →
+admin batch settles to paid, with notifications at every hop and a 7-day
+**auto-release cron**. Trust gates enforced (seller approval, payout-setup,
+listing moderation). Live **fraud detection** (scheduled, scored) + admin
+dashboard. AI assistant answers over the KB. A **50-seller / 566-listing /
+303-order** demo dataset with photos, reseedable via `supabase db reset`.
+
+**Phase → commit (all pushed to `main`):**
+- P0 schema reconciliation & security — `fix(phase-0)`
+- P1 commerce core (payments/delivery/escrow/payouts/cron) — `feat(phase-1)`
+- P2 trust gates & connective tissue — `feat(phase-2)`
+- P3 live fraud + AI status — `feat(phase-3)`
+- P4 demo dataset — `feat(phase-4)`
+- P5 tests + runbook — this commit
+
+**Verification:** `tsc --noEmit` green · `npm run lint` 0 errors · `npm run test`
+green (unit) · `npm run test:integration` green (money identity 120/120).
+
+**Bugs found & fixed beyond the roadmap:** `listings.primary_image_url`
+(nonexistent), `onboard` wrong column (`name`→`store_name`), `rejectListing`
+invalid enum + missing column, mechanic earnings `reference`→`transaction_ref`,
+fraud/auto-release `disputes.buyer_id`→`opened_by` and `under_review`→`reviewing`.
+
+**Documented follow-ups:** mechanic service queries wrong table
+(`verification_requests` vs `mechanic_verifications`); listing images use CDN
+URLs not Supabase Storage; embeddings not backfilled (fallbacks work); recs
+rails + messages badge deferred as polish. See `RUNBOOK-demo.md` §6.
+
+---
+
 <!-- Append per-task summaries below as work lands. -->
 
 ## Phase 0 — Schema reconciliation & security hotfixes
@@ -252,3 +289,29 @@ reconciled to the real table — a documented follow-up.
 - **Embeddings not backfilled** — `listings.embedding` is NULL, so vector search
   / recommendations use their SQL/keyword fallbacks (which work). Backfill needs
   a one-time OpenAI run (documented).
+
+---
+
+## Phase 5 — Testing & release (no e2e, per project decision)
+
+Test suites on the critical paths + the demo runbook. `npm run test` is green
+(was red — zero test files); `npm run test:integration` is green.
+
+### Unit (`npm run test`) — 7 passing
+`__tests__/unit/payments.test.ts` covers the payments seam: COD, card
+success/decline (sandbox), wallet success/fail, `cardProvider`, `defaultInstrument`.
+
+### Integration (`npm run test:integration`) — 3 passing
+`__tests__/integration/seed-integrity.integration.test.ts` asserts, against the
+seeded local DB: headline volumes, every active listing has an image, and the
+**money identity** — every released escrow has a matching payout of exactly
+`seller_payout` (120/120).
+
+### Runbook (`RUNBOOK-demo.md`)
+Environment setup (55xxx ports, reset+seed, :3202), credentials, per-role demo
+script (buyer purchase → seller fulfil → confirm → payout; admin approve /
+moderate / payout batch / fraud; mechanic; AI assistant), verification commands,
+known issues/deviations for the viva, and a go/no-go checklist.
+
+**E2E:** intentionally omitted per project decision; unit + integration cover the
+critical paths.
