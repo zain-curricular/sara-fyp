@@ -71,7 +71,16 @@ begin
 
 		insert into public.profiles (id, email, full_name, display_name, handle, city, bio, roles, active_role, role, is_verified, phone_verified, avatar_url, avg_rating, total_reviews)
 		values (v_uid, v_email, v_name, v_name, 'seller_' || i, v_city, 'Trusted auto parts supplier in ' || v_city || '.', array['seller','buyer'], 'seller', 'seller', true, true, 'https://i.pravatar.cc/150?img=' || (i % 70), round((3.5 + random() * 1.5)::numeric, 1), (10 + (i * 7) % 90))
-		on conflict (id) do nothing;
+		-- DO UPDATE (not DO NOTHING): the on_auth_user_created trigger pre-creates a
+		-- bare profile (display_name = email local-part, e.g. "seller1") the moment the
+		-- auth.users row above is inserted, so a plain insert here is skipped and the
+		-- real name/handle are lost. Overwrite the trigger's placeholder.
+		on conflict (id) do update set
+			email = excluded.email, full_name = excluded.full_name, display_name = excluded.display_name,
+			handle = excluded.handle, city = excluded.city, bio = excluded.bio, roles = excluded.roles,
+			active_role = excluded.active_role, role = excluded.role, is_verified = excluded.is_verified,
+			phone_verified = excluded.phone_verified, avatar_url = excluded.avatar_url,
+			avg_rating = excluded.avg_rating, total_reviews = excluded.total_reviews;
 
 		-- Approval mix: 40 approved, 6 pending, 4 rejected.
 		v_approval := case when i <= 40 then 'approved' when i <= 46 then 'pending' else 'rejected' end;
@@ -138,7 +147,14 @@ begin
 
 		insert into public.profiles (id, email, full_name, display_name, handle, city, roles, active_role, role, is_verified, phone_verified, is_banned, avatar_url, avg_rating, total_reviews)
 		values (v_uid, v_email, v_name, v_name, 'buyer_' || i, v_city, array['buyer'], 'buyer', 'user', false, (i % 3 = 0), (i >= 79), 'https://i.pravatar.cc/150?img=' || ((i + 20) % 70), 0, 0)
-		on conflict (id) do nothing;
+		-- DO UPDATE: overwrite the on_auth_user_created trigger's placeholder profile
+		-- (see the seller loop above) so the real name/handle land.
+		on conflict (id) do update set
+			email = excluded.email, full_name = excluded.full_name, display_name = excluded.display_name,
+			handle = excluded.handle, city = excluded.city, roles = excluded.roles,
+			active_role = excluded.active_role, role = excluded.role, is_verified = excluded.is_verified,
+			phone_verified = excluded.phone_verified, is_banned = excluded.is_banned,
+			avatar_url = excluded.avatar_url, avg_rating = excluded.avg_rating, total_reviews = excluded.total_reviews;
 
 		insert into public.saved_addresses (id, user_id, label, full_name, phone, address_line, city, province, is_default)
 		values (('a1b20000-0000-0000-0000-' || lpad(to_hex(i), 12, '0'))::uuid, v_uid, 'Home', v_name, '+9230012' || lpad(i::text, 5, '0'), 'House ' || i || ', Block ' || (1 + i % 9) || ', ' || v_city, v_city, v_prov, true)
@@ -163,7 +179,14 @@ begin
 
 		insert into public.profiles (id, email, full_name, display_name, handle, city, bio, roles, active_role, role, is_verified, phone_verified, avatar_url, avg_rating, total_reviews)
 		values (v_uid, v_email, v_name, v_name, 'mech_' || i, v_city, 'Certified mechanic — ' || v_city || '.', array['mechanic','buyer'], 'mechanic', 'user', (i <= 7), true, 'https://i.pravatar.cc/150?img=' || ((i + 40) % 70), round((4 + random())::numeric, 1), (i * 3))
-		on conflict (id) do nothing;
+		-- DO UPDATE: overwrite the on_auth_user_created trigger's placeholder profile
+		-- (see the seller loop above) so the real name/handle land.
+		on conflict (id) do update set
+			email = excluded.email, full_name = excluded.full_name, display_name = excluded.display_name,
+			handle = excluded.handle, city = excluded.city, bio = excluded.bio, roles = excluded.roles,
+			active_role = excluded.active_role, role = excluded.role, is_verified = excluded.is_verified,
+			phone_verified = excluded.phone_verified, avatar_url = excluded.avatar_url,
+			avg_rating = excluded.avg_rating, total_reviews = excluded.total_reviews;
 
 		insert into public.mechanics (id, specialties, service_areas, hourly_rate, verified_at, total_jobs, rating)
 		values (v_uid, array['Engine','Brakes','Electrical'], array[v_city, v_cities[1 + ((i + 1) % 8)]], 1500, case when i <= 7 then now() - (i || ' days')::interval else null end, (i * 5), round((4 + random())::numeric, 1))
