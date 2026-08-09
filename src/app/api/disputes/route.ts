@@ -11,6 +11,7 @@ import "server-only";
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { uuid } from "@/lib/validation/uuid";
 
 import { authenticateRequest } from "@/lib/auth/guards";
 import {
@@ -30,7 +31,7 @@ const DISPUTE_REASONS: DisputeReason[] = [
 ];
 
 const postBody = z.object({
-	orderId: z.string().uuid("Invalid order ID"),
+	orderId: uuid("Invalid order ID"),
 	reason: z.enum(DISPUTE_REASONS as [DisputeReason, ...DisputeReason[]]),
 	description: z
 		.string()

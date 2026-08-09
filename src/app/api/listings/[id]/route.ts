@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { uuid } from "@/lib/validation/uuid";
 
 import { authenticateRequest } from "@/lib/auth/guards";
 import {
@@ -70,9 +71,9 @@ const PatchListingSchema = z
 		condition: z
 			.enum(["new", "used", "refurbished", "oem", "aftermarket"])
 			.optional(),
-		category_id: z.string().uuid().optional(),
-		part_category_id: z.string().uuid().optional(),
-		model_id: z.string().uuid().optional(),
+		category_id: uuid().optional(),
+		part_category_id: uuid().optional(),
+		model_id: uuid().optional(),
 		city: z.string().min(2).optional(),
 		area: z.string().optional(),
 		stock: z.number().int().min(0).optional(),

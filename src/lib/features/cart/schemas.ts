@@ -6,10 +6,11 @@
 // client before submitting mutations.
 
 import { z } from "zod";
+import { uuid } from "@/lib/validation/uuid";
 
 /** POST /api/cart/items — add a listing to cart */
 export const addToCartSchema = z.object({
-	listingId: z.string().uuid("listingId must be a valid UUID"),
+	listingId: uuid("listingId must be a valid UUID"),
 	qty: z.number().int().min(1, "qty must be at least 1").max(100, "qty cannot exceed 100"),
 });
 

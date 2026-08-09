@@ -1,12 +1,13 @@
 import { z } from "zod";
+import { uuid } from "@/lib/validation/uuid";
 
 /** URL/search params for `/search` (mirrors marketplace `listingsSearchQuerySchema`). */
 export const listingsSearchParamsSchema = z
 	.object({
 		q: z.string().max(80).optional(),
 		platform: z.enum(["mobile", "automotive"]).optional(),
-		category_id: z.string().uuid().optional(),
-		model_id: z.string().uuid().optional(),
+		category_id: uuid().optional(),
+		model_id: uuid().optional(),
 		city: z.string().max(120).optional(),
 		price_min: z.coerce.number().positive().optional(),
 		price_max: z.coerce.number().positive().optional(),
@@ -24,8 +25,8 @@ export type ListingsSearchParams = z.infer<typeof listingsSearchParamsSchema>;
 export const createListingWizardSchema = z
 	.object({
 		platform: z.literal("automotive"),
-		category_id: z.string().uuid(),
-		model_id: z.string().uuid().nullable().optional(),
+		category_id: uuid(),
+		model_id: uuid().nullable().optional(),
 		title: z.string().min(1).max(200),
 		description: z.string().max(20000).nullable().optional(),
 		sale_type: z.enum(["fixed", "auction", "both"]),

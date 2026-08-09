@@ -6,10 +6,11 @@
 // agreeToFee must be true — used to confirm the buyer accepted the PKR 500 fee.
 
 import { z } from "zod";
+import { uuid } from "@/lib/validation/uuid";
 
 export const createMechanicRequestSchema = z.object({
-	listingId: z.string().uuid("Invalid listing ID"),
-	vehicleId: z.string().uuid("Invalid vehicle ID"),
+	listingId: uuid("Invalid listing ID"),
+	vehicleId: uuid("Invalid vehicle ID"),
 	notes: z.string().optional(),
 	agreeToFee: z.literal(true),
 });

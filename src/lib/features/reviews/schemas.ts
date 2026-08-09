@@ -1,8 +1,9 @@
 import { z } from "zod";
+import { uuid } from "@/lib/validation/uuid";
 
 export const postReviewSchema = z
 	.object({
-		order_id: z.string().uuid(),
+		order_id: uuid(),
 		rating: z.number().int().min(1).max(5),
 		comment: z.string().max(1000).optional().nullable(),
 	})

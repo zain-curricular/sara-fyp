@@ -8,7 +8,7 @@
 //
 // Cart table: carts (id, user_id, created_at, updated_at)
 // Items table: cart_items (id, cart_id, listing_id, qty, snapshot_price, added_at)
-// Join with: listings, store_profiles
+// Join with: listings, seller_stores, listing_images
 
 import "server-only";
 
@@ -24,8 +24,14 @@ import type { Cart, CartItem, CartSummary, SellerGroup } from "@/lib/features/ca
 function buildCartItem(row: Record<string, unknown>): CartItem {
 	const listing = row.listings as Record<string, unknown> | null;
 	const store = listing
-		? (listing.store_profiles as Record<string, unknown> | null)
+		? (listing.seller_stores as Record<string, unknown> | null)
 		: null;
+
+	// Cover image = lowest-position listing_images row.
+	const images = listing
+		? ((listing.listing_images as { url: string; position: number }[] | null) ?? [])
+		: [];
+	const cover = [...images].sort((a, b) => a.position - b.position)[0]?.url ?? null;
 
 	return {
 		id: row.id as string,
@@ -41,7 +47,7 @@ function buildCartItem(row: Record<string, unknown>): CartItem {
 					sellerId: listing.user_id as string,
 					storeName: (store?.store_name as string) ?? "Unknown Store",
 					storeSlug: (store?.slug as string) ?? "",
-					imageUrl: (listing.primary_image_url as string | null) ?? null,
+					imageUrl: cover,
 					status: listing.status as string,
 					stock: (listing.stock as number | null) ?? null,
 				}
@@ -281,8 +287,11 @@ export async function getCartWithItems(
 				user_id,
 				status,
 				stock,
-				primary_image_url,
-				store_profiles (
+				listing_images (
+					url,
+					position
+				),
+				seller_stores (
 					store_name,
 					slug
 				)

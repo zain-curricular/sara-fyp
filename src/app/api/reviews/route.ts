@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { uuid } from "@/lib/validation/uuid";
 
 import { authenticateRequest } from "@/lib/auth/guards";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -22,8 +23,8 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const listQuerySchema = z
 	.object({
-		listing_id: z.string().uuid().optional(),
-		seller_id: z.string().uuid().optional(),
+		listing_id: uuid().optional(),
+		seller_id: uuid().optional(),
 		page: z.coerce.number().int().min(1).max(10_000).default(1),
 		limit: z.coerce.number().int().min(1).max(50).default(20),
 	})
@@ -83,8 +84,8 @@ export async function GET(req: NextRequest) {
 
 const postSchema = z
 	.object({
-		listing_id: z.string().uuid(),
-		order_id: z.string().uuid(),
+		listing_id: uuid(),
+		order_id: uuid(),
 		rating: z.number().int().min(1).max(5),
 		comment: z.string().max(1000).optional().nullable(),
 	})

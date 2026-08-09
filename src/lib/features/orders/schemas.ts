@@ -6,6 +6,7 @@
 // checkout payload. shipOrderSchema is used by sellers when marking shipped.
 
 import { z } from "zod";
+import { uuid } from "@/lib/validation/uuid";
 
 import type { OrderStatus } from "@/lib/features/orders/types";
 
@@ -19,8 +20,8 @@ const shippingAddressSchema = z.object({
 
 /** POST /api/orders — place order for one seller group from cart */
 export const placeOrderSchema = z.object({
-	cartGroupSellerId: z.string().uuid("cartGroupSellerId must be a valid UUID"),
-	shippingAddressId: z.string().uuid().nullable().optional(),
+	cartGroupSellerId: uuid("cartGroupSellerId must be a valid UUID"),
+	shippingAddressId: uuid().nullable().optional(),
 	shippingAddress: shippingAddressSchema.nullable(),
 	paymentMethod: z.enum(["cod", "jazzcash", "easypaisa", "card"]),
 	// Card number (card) or mobile-wallet number (jazzcash/easypaisa). Ignored

@@ -14,6 +14,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { uuid } from "@/lib/validation/uuid";
 
 import { authenticateRequest } from "@/lib/auth/guards";
 import { listingsSearchParamsSchema } from "@/lib/features/listings/schemas";
@@ -60,9 +61,9 @@ const CreateListingSchema = z.object({
 	price: z.number().positive(),
 	compare_at_price: z.number().positive().optional(),
 	condition: z.enum(["new", "used", "refurbished", "oem", "aftermarket"]),
-	category_id: z.string().uuid(),
-	part_category_id: z.string().uuid().optional(),
-	model_id: z.string().uuid().optional(),
+	category_id: uuid(),
+	part_category_id: uuid().optional(),
+	model_id: uuid().optional(),
 	city: z.string().min(2),
 	area: z.string().optional(),
 	stock: z.number().int().min(1).default(1),
