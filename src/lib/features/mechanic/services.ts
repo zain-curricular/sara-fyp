@@ -160,11 +160,10 @@ export async function listPendingRequests(mechanicId: string): Promise<{
 	const serviceAreas = (mechanic?.service_areas as string[]) ?? [];
 
 	const { data, error } = await supabase
-		.from("verification_requests")
+		.from("mechanic_verifications")
 		.select(
-			`id, buyer_id, listing_id, mechanic_id, status, verdict, notes, buyer_notes, responded_at, created_at,
-			 listings!inner(title, price, city, listing_images(url, position)),
-			 part_categories(name)`,
+			`id, requester_id, listing_id, mechanic_id, status, mechanic_notes, vehicle_details, responded_at, created_at,
+			 listings!inner(title, price, city, listing_images(url, position))`,
 		)
 		.eq("status", "pending")
 		.is("mechanic_id", null)
@@ -185,9 +184,9 @@ export async function listAssignedRequests(mechanicId: string): Promise<{
 	const supabase = await createServerSupabaseClient();
 
 	const { data, error } = await supabase
-		.from("verification_requests")
+		.from("mechanic_verifications")
 		.select(
-			`id, buyer_id, listing_id, mechanic_id, status, verdict, notes, buyer_notes, responded_at, created_at,
+			`id, requester_id, listing_id, mechanic_id, status, mechanic_notes, vehicle_details, responded_at, created_at,
 			 listings!inner(title, price, city, listing_images(url, position))`,
 		)
 		.eq("mechanic_id", mechanicId)
@@ -207,13 +206,13 @@ export async function listCompletedRequests(mechanicId: string): Promise<{
 	const supabase = await createServerSupabaseClient();
 
 	const { data, error } = await supabase
-		.from("verification_requests")
+		.from("mechanic_verifications")
 		.select(
-			`id, buyer_id, listing_id, mechanic_id, status, verdict, notes, buyer_notes, responded_at, created_at,
+			`id, requester_id, listing_id, mechanic_id, status, mechanic_notes, vehicle_details, responded_at, created_at,
 			 listings!inner(title, price, city, listing_images(url, position))`,
 		)
 		.eq("mechanic_id", mechanicId)
-		.eq("status", "completed")
+		.in("status", ["verified_compatible", "verified_incompatible", "rejected"])
 		.order("responded_at", { ascending: false })
 		.limit(100);
 
@@ -248,8 +247,8 @@ export async function acceptRequest(
 
 	// Fetch request to get buyer_id
 	const { data: req, error: fetchError } = await admin
-		.from("verification_requests")
-		.select("id, buyer_id, status, listing_id")
+		.from("mechanic_verifications")
+		.select("id, requester_id, status, listing_id")
 		.eq("id", requestId)
 		.eq("status", "pending")
 		.maybeSingle();
@@ -259,7 +258,7 @@ export async function acceptRequest(
 
 	// Assign mechanic
 	const { error: updateError } = await admin
-		.from("verification_requests")
+		.from("mechanic_verifications")
 		.update({ mechanic_id: mechanicId, status: "assigned" })
 		.eq("id", requestId)
 		.eq("status", "pending");
@@ -268,7 +267,7 @@ export async function acceptRequest(
 
 	// Notify buyer
 	await admin.from("notifications").insert({
-		user_id: req.buyer_id,
+		user_id: req.requester_id,
 		type: "order_status",
 		title: "Mechanic assigned",
 		body: "A mechanic has accepted your part verification request.",
@@ -296,8 +295,8 @@ export async function submitVerdict(
 	const admin = createAdminSupabaseClient();
 
 	const { data: req, error: fetchError } = await admin
-		.from("verification_requests")
-		.select("id, buyer_id, status, mechanic_id")
+		.from("mechanic_verifications")
+		.select("id, requester_id, status, mechanic_id")
 		.eq("id", requestId)
 		.eq("mechanic_id", mechanicId)
 		.eq("status", "assigned")
@@ -307,11 +306,12 @@ export async function submitVerdict(
 	if (!req) return { error: new Error("Request not found or not assigned to you") };
 
 	const { error: updateError } = await admin
-		.from("verification_requests")
+		.from("mechanic_verifications")
 		.update({
-			verdict,
-			notes,
-			status: "completed",
+			// mechanic_verifications stores the verdict IN status; notes -> mechanic_notes.
+			status: verdict,
+			mechanic_notes: notes,
+			paid: true,
 			responded_at: new Date().toISOString(),
 		})
 		.eq("id", requestId);
@@ -352,7 +352,7 @@ export async function submitVerdict(
 				: "Insufficient info";
 
 	await admin.from("notifications").insert({
-		user_id: req.buyer_id,
+		user_id: req.requester_id,
 		type: "order_status",
 		title: "Verification complete",
 		body: `Mechanic verdict: ${verdictLabel}. View the full report for details.`,
@@ -373,15 +373,26 @@ function mapRequests(rows: unknown[]): MechanicVerificationRequest[] {
 		const images = (listing?.listing_images as { url: string; position: number }[]) ?? [];
 		const firstImage = images.sort((a, b) => a.position - b.position)[0] ?? null;
 
+		//.. mechanic_verifications encodes the verdict in `status`; derive the
+		//.. domain status + verdict the UI expects. Buyer notes live in
+		//.. `vehicle_details` (the buyer-side create writes them there).
+		const realStatus = row.status as string;
+		const verdict: VerificationVerdict | null =
+			realStatus === "verified_compatible" || realStatus === "verified_incompatible" || realStatus === "rejected"
+				? (realStatus as VerificationVerdict)
+				: null;
+		const status: MechanicVerificationRequest["status"] =
+			realStatus === "pending" ? "pending" : realStatus === "assigned" ? "assigned" : realStatus === "expired" ? "cancelled" : "completed";
+
 		return {
 			id: row.id as string,
-			buyerId: row.buyer_id as string,
+			buyerId: row.requester_id as string,
 			listingId: row.listing_id as string,
 			mechanicId: row.mechanic_id as string | null,
-			status: row.status as MechanicVerificationRequest["status"],
-			verdict: row.verdict as VerificationVerdict | null,
-			notes: row.notes as string | null,
-			buyerNotes: row.buyer_notes as string | null,
+			status,
+			verdict,
+			notes: (row.mechanic_notes as string | null) ?? null,
+			buyerNotes: (row.vehicle_details as string | null) ?? null,
 			respondedAt: row.responded_at as string | null,
 			createdAt: row.created_at as string,
 			listing: listing

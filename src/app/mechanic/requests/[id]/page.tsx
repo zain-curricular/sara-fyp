@@ -29,9 +29,9 @@ export default async function MechanicRequestDetailPage({
 	const supabase = await createServerSupabaseClient();
 
 	const { data: row, error } = await supabase
-		.from("verification_requests")
+		.from("mechanic_verifications")
 		.select(
-			`id, buyer_id, listing_id, mechanic_id, status, verdict, notes, buyer_notes, responded_at, created_at,
+			`id, requester_id, listing_id, mechanic_id, status, mechanic_notes, vehicle_details, responded_at, created_at,
 			 listings!inner(id, title, price, city, description, condition, details,
 			   listing_images(url, position))`,
 		)
@@ -45,6 +45,16 @@ export default async function MechanicRequestDetailPage({
 	const images = (listing.listing_images as { url: string; position: number }[]) ?? [];
 	const sortedImages = [...images].sort((a, b) => a.position - b.position);
 
+	// mechanic_verifications encodes the verdict in `status`; derive the domain
+	// status + verdict the UI expects. Buyer notes live in `vehicle_details`.
+	const realStatus = row.status as string;
+	const verdict =
+		realStatus === "verified_compatible" || realStatus === "verified_incompatible" || realStatus === "rejected"
+			? (realStatus as MechanicVerificationRequest["verdict"])
+			: null;
+	const domainStatus: MechanicVerificationRequest["status"] =
+		realStatus === "pending" ? "pending" : realStatus === "assigned" ? "assigned" : realStatus === "expired" ? "cancelled" : "completed";
+
 	const request: MechanicVerificationRequest & {
 		listingDetail: {
 			description: string | null;
@@ -54,13 +64,13 @@ export default async function MechanicRequestDetailPage({
 		};
 	} = {
 		id: row.id as string,
-		buyerId: row.buyer_id as string,
+		buyerId: row.requester_id as string,
 		listingId: row.listing_id as string,
 		mechanicId: row.mechanic_id as string | null,
-		status: row.status as MechanicVerificationRequest["status"],
-		verdict: row.verdict as MechanicVerificationRequest["verdict"],
-		notes: row.notes as string | null,
-		buyerNotes: row.buyer_notes as string | null,
+		status: domainStatus,
+		verdict,
+		notes: (row.mechanic_notes as string | null) ?? null,
+		buyerNotes: (row.vehicle_details as string | null) ?? null,
 		respondedAt: row.responded_at as string | null,
 		createdAt: row.created_at as string,
 		listing: {

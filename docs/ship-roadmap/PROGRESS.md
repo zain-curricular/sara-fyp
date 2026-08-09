@@ -39,10 +39,13 @@ green (unit) · `npm run test:integration` green (money identity 120/120).
 invalid enum + missing column, mechanic earnings `reference`→`transaction_ref`,
 fraud/auto-release `disputes.buyer_id`→`opened_by` and `under_review`→`reviewing`.
 
-**Documented follow-ups:** mechanic service queries wrong table
-(`verification_requests` vs `mechanic_verifications`); listing images use CDN
-URLs not Supabase Storage; embeddings not backfilled (fallbacks work); recs
-rails + messages badge deferred as polish. See `RUNBOOK-demo.md` §6.
+**Post-ship follow-up done:** the mechanic module (both services + detail page)
+was reconciled to the real `mechanic_verifications` table (they queried phantom
+`verification_requests` / `mechanic_requests`); list/accept/verdict now work.
+
+**Remaining follow-ups:** listing images use CDN URLs not Supabase Storage;
+embeddings not backfilled (fallbacks work); recs rails + messages badge deferred
+as polish. See `RUNBOOK-demo.md` §6.
 
 ---
 

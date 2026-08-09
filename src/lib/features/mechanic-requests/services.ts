@@ -80,7 +80,7 @@ export async function createMechanicRequest(
 	const supabase = await createServerSupabaseClient();
 
 	const { data, error } = await supabase
-		.from("mechanic_requests")
+		.from("mechanic_verifications")
 		.insert({
 			requester_id: requesterId,
 			listing_id: input.listingId,
@@ -108,7 +108,7 @@ export async function listMechanicRequestsForBuyer(
 	const supabase = await createServerSupabaseClient();
 
 	const { data, error } = await supabase
-		.from("mechanic_requests")
+		.from("mechanic_verifications")
 		.select(
 			`
 			id,
@@ -144,7 +144,7 @@ export async function getMechanicRequestDetail(
 	const supabase = await createServerSupabaseClient();
 
 	const { data, error } = await supabase
-		.from("mechanic_requests")
+		.from("mechanic_verifications")
 		.select(
 			`
 			id,

@@ -126,10 +126,9 @@ belonging to an order has a matching payout of exactly `seller_payout` — verif
 
 ## 6. Known issues & deliberate deviations (anticipate viva questions)
 
-- **Mechanic module** — `mechanic/services.ts` queries a nonexistent table
-  `verification_requests`; the real table is `mechanic_verifications` (different
-  columns). Data is seeded (24 rows) but the list/accept/verdict flow needs the
-  service reconciled. *Follow-up.*
+- **Mechanic module** — ✅ fixed (post-ship follow-up): both mechanic services +
+  the detail page now use the real `mechanic_verifications` table (verdict is
+  encoded in `status`). List/accept/verdict + the seeded 24 rows work.
 - **Listing images use CDN URLs** (loremflickr/pravatar), not Supabase Storage —
   real and reliable but needs internet at demo time. Storage upload is a follow-up.
 - **Embeddings not backfilled** — `listings.embedding` is NULL, so vector search /
