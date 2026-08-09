@@ -208,7 +208,7 @@ export async function getUserDetail(userId: string): Promise<{
 			adminId: a.admin_id as string,
 			targetType: a.target_type as string,
 			targetId: a.target_id as string,
-			action: a.action as string,
+			action: a.action_type as string,
 			note: (a.note as string | null) ?? null,
 			createdAt: a.created_at as string,
 		}),
@@ -251,7 +251,7 @@ export async function banUser(
 		admin_id: adminId,
 		target_type: "user",
 		target_id: userId,
-		action: "ban_user",
+		action_type: "ban_user",
 		note,
 	});
 
@@ -276,7 +276,7 @@ export async function unbanUser(
 		admin_id: adminId,
 		target_type: "user",
 		target_id: userId,
-		action: "unban_user",
+		action_type: "unban_user",
 		note: null,
 	});
 
@@ -313,7 +313,7 @@ export async function grantAdminRole(
 		admin_id: adminId,
 		target_type: "user",
 		target_id: userId,
-		action: "grant_admin",
+		action_type: "grant_admin",
 		note: null,
 	});
 
@@ -428,7 +428,7 @@ export async function setSellerVerified(
 			admin_id: adminId,
 			target_type: "seller",
 			target_id: sellerId,
-			action: verified ? "verify_seller" : "unverify_seller",
+			action_type: verified ? "verify_seller" : "unverify_seller",
 			note: null,
 		});
 	}
@@ -591,7 +591,7 @@ export async function approveListing(
 		admin_id: adminId,
 		target_type: "listing",
 		target_id: listingId,
-		action: "approve_listing",
+		action_type: "approve_listing",
 		note: null,
 	});
 
@@ -638,7 +638,7 @@ export async function rejectListing(
 		admin_id: adminId,
 		target_type: "listing",
 		target_id: listingId,
-		action: "reject_listing",
+		action_type: "reject_listing",
 		note: reason,
 	});
 
@@ -762,7 +762,7 @@ export async function forceCancelOrder(
 			admin_id: adminId,
 			target_type: "order",
 			target_id: orderId,
-			action: "force_cancel",
+			action_type: "force_cancel",
 			note: reason,
 		});
 	}
@@ -914,23 +914,31 @@ export async function resolveDispute(
 
 	if (disputeErr) return { error: disputeErr };
 
-	// Transition order status
+	// Transition order status — disputed -> refunded | completed, both valid on
+	// the order FSM.
 	await supabase
 		.from("orders")
 		.update({ ss_status: newOrderStatus })
 		.eq("id", orderId);
 
-	// Update escrow transaction status
+	//.. Escrow must land in a CHECK-valid terminal state (held/released/refunded/
+	//.. disputed) — NOT the order's 'completed'. Buyer wins -> refunded, seller
+	//.. wins -> released, each stamped with its ledger timestamp.
+	const escrowUpdate =
+		resolution === "resolved_buyer"
+			? { ss_status: "refunded", refunded_at: new Date().toISOString() }
+			: { ss_status: "released", released_at: new Date().toISOString() };
+
 	await supabase
 		.from("escrow_transactions")
-		.update({ ss_status: newOrderStatus })
+		.update(escrowUpdate)
 		.eq("order_id", orderId);
 
 	await supabase.from("admin_actions").insert({
 		admin_id: adminId,
 		target_type: "dispute",
 		target_id: disputeId,
-		action: resolution,
+		action_type: resolution,
 		note,
 	});
 
@@ -993,7 +1001,7 @@ export async function dismissFraudSignal(
 			admin_id: adminId,
 			target_type: "fraud_signal",
 			target_id: signalId,
-			action: "dismiss_fraud",
+			action_type: "dismiss_fraud",
 			note: null,
 		});
 	}
@@ -1019,7 +1027,7 @@ export async function actionFraudSignal(
 			admin_id: adminId,
 			target_type: "fraud_signal",
 			target_id: signalId,
-			action: "action_fraud",
+			action_type: "action_fraud",
 			note,
 		});
 	}
@@ -1082,7 +1090,7 @@ export async function setMechanicVerified(
 			admin_id: adminId,
 			target_type: "mechanic",
 			target_id: mechanicId,
-			action: verified ? "verify_mechanic" : "unverify_mechanic",
+			action_type: verified ? "verify_mechanic" : "unverify_mechanic",
 			note: null,
 		});
 	}
@@ -1255,7 +1263,7 @@ export async function listKBDocuments(): Promise<{ data: KBDocument[]; error: un
 
 	const { data, error } = await supabase
 		.from("kb_documents")
-		.select("id, title, source_url, created_at")
+		.select("id, title, source, created_at")
 		.order("created_at", { ascending: false })
 		.limit(200);
 
@@ -1265,7 +1273,7 @@ export async function listKBDocuments(): Promise<{ data: KBDocument[]; error: un
 		data: ((data ?? []) as Array<Record<string, unknown>>).map((d) => ({
 			id: d.id as string,
 			title: d.title as string,
-			sourceUrl: (d.source_url as string | null) ?? null,
+			sourceUrl: (d.source as string | null) ?? null,
 			createdAt: d.created_at as string,
 		})),
 		error: null,
@@ -1285,9 +1293,11 @@ export async function createKBDocument(
 		.from("kb_documents")
 		.insert({
 			title,
-			source_url: sourceUrl,
+			source: sourceUrl,
 			content,
-			embedding,
+			// vector(1536) rejects an empty array — insert NULL when no embedding
+			// was generated (e.g. no OPENAI_API_KEY); the P3.3 backfill fills it.
+			embedding: embedding.length > 0 ? embedding : null,
 		})
 		.select("id")
 		.single();
@@ -1360,8 +1370,9 @@ export async function runPayoutBatch(adminId: string): Promise<{ data: { count: 
 	await supabase.from("admin_actions").insert({
 		admin_id: adminId,
 		target_type: "payouts",
-		target_id: "batch",
-		action: "run_payout_batch",
+		// target_id is a uuid column; a batch run has no single target.
+		target_id: null,
+		action_type: "run_payout_batch",
 		note: `Processed ${count} payouts`,
 	});
 
@@ -1433,7 +1444,7 @@ export async function listRecentAdminActions(limit = 10): Promise<{
 			adminId: a.admin_id as string,
 			targetType: a.target_type as string,
 			targetId: a.target_id as string,
-			action: a.action as string,
+			action: a.action_type as string,
 			note: (a.note as string | null) ?? null,
 			createdAt: a.created_at as string,
 		})),

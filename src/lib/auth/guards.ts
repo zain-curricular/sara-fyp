@@ -7,6 +7,7 @@
 
 import "server-only";
 
+import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -92,14 +93,11 @@ export async function getServerSession(): Promise<{
 }
 
 /** Redirect to /login with ?next= if not authenticated. For use in page.tsx. */
-export function loginRedirect(next: string) {
-	const url = `/login?next=${encodeURIComponent(next)}`;
-	const { redirect } = require("next/navigation");
-	redirect(url);
+export function loginRedirect(next: string): never {
+	redirect(`/login?next=${encodeURIComponent(next)}`);
 }
 
 /** Redirect to /403 if role missing. For use in page.tsx. */
-export function forbiddenRedirect() {
-	const { redirect } = require("next/navigation");
+export function forbiddenRedirect(): never {
 	redirect("/403");
 }

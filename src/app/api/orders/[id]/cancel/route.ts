@@ -63,13 +63,13 @@ export async function POST(request: NextRequest, context: RouteContext): Promise
 		return NextResponse.json({ ok: false, error: msg }, { status: 400 });
 	}
 
-	// If there was escrow, mark as refunded
+	// If there was escrow, mark it refunded — canonical ss_status (held/released → refunded).
 	const admin = createAdminSupabaseClient();
 	await admin
 		.from("escrow_transactions")
-		.update({ status: "refunded" })
+		.update({ ss_status: "refunded", refunded_at: new Date().toISOString() })
 		.eq("order_id", id)
-		.in("status", ["held", "released"]);
+		.in("ss_status", ["held", "released"]);
 
 	return NextResponse.json({ ok: true });
 }

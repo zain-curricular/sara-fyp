@@ -38,7 +38,7 @@ export async function createOrGetSession(
 	// Try to find an existing session
 	if (existingSessionId) {
 		const { data } = await admin
-			.from("chat_sessions")
+			.from("chatbot_sessions")
 			.select("id")
 			.eq("id", existingSessionId)
 			.maybeSingle();
@@ -48,7 +48,7 @@ export async function createOrGetSession(
 
 	// Create a new session
 	const { data, error } = await admin
-		.from("chat_sessions")
+		.from("chatbot_sessions")
 		.insert({
 			user_id: userId,
 			messages: [],
@@ -78,7 +78,7 @@ export async function appendMessage(
 
 	// Read current messages
 	const { data: session } = await admin
-		.from("chat_sessions")
+		.from("chatbot_sessions")
 		.select("messages")
 		.eq("id", sessionId)
 		.maybeSingle();
@@ -87,7 +87,7 @@ export async function appendMessage(
 	const updated = [...current, message];
 
 	const { error } = await admin
-		.from("chat_sessions")
+		.from("chatbot_sessions")
 		.update({
 			messages: updated,
 			last_message_at: new Date().toISOString(),
@@ -147,7 +147,7 @@ export async function retrieveContext(query: string): Promise<{
 	const [kbResult, listingsResult] = await Promise.all([
 		supabase
 			.from("kb_documents")
-			.select("id, title, content, slug")
+			.select("id, title, content")
 			.textSearch("content", searchTerm, { type: "websearch" })
 			.limit(3),
 		supabase
@@ -188,7 +188,9 @@ function mapKbDocs(rows: unknown[]): KbDoc[] {
 		id: r.id as string,
 		title: r.title as string,
 		content: ((r.content as string) ?? "").slice(0, 500),
-		slug: r.slug as string | null,
+		// kb_documents has no slug column; retained as null for the KbDoc shape
+		// (citations use id/title/source — wired in P3.2).
+		slug: (r.slug as string | null) ?? null,
 	}));
 }
 

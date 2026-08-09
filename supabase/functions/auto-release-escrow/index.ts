@@ -25,8 +25,7 @@ Deno.serve(async (_req) => {
 		.from("orders")
 		.select("id, store_id")
 		.eq("ss_status", "delivered")
-		.lt("updated_at", cutoff.toISOString())
-		.is("deleted_at", null);
+		.lt("updated_at", cutoff.toISOString());
 
 	if (error) {
 		return new Response(JSON.stringify({ error: error.message }), { status: 500 });
@@ -56,12 +55,12 @@ Deno.serve(async (_req) => {
 			continue;
 		}
 
-		// Release escrow transaction
+		// Release escrow transaction — canonical ss_status (held -> released).
 		await supabase
 			.from("escrow_transactions")
-			.update({ status: "released", released_at: new Date().toISOString() })
+			.update({ ss_status: "released", released_at: new Date().toISOString() })
 			.eq("order_id", order.id)
-			.eq("status", "held");
+			.eq("ss_status", "held");
 
 		released++;
 	}

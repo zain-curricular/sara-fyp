@@ -18,7 +18,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams): Prom
 
 	const { id } = await params;
 
-	const { error } = await markConversationRead(id, auth.userId);
+	const { error } = await markConversationRead(id);
 
 	if (error) {
 		console.error(`[POST /api/conversations/${id}/read]`, error);

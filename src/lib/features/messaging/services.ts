@@ -37,49 +37,58 @@ export async function getOrCreateConversation(
 ): Promise<{ data: { conversationId: string } | null; error: unknown }> {
 	const supabase = await createServerSupabaseClient();
 
-	// Try to find an existing conversation first
-	let query = supabase
-		.from("conversations")
-		.select("id")
-		.eq("buyer_id", buyerId)
-		.eq("seller_id", sellerId);
-
-	if (listingId) {
-		query = query.eq("listing_id", listingId);
-	} else {
-		query = query.is("listing_id", null);
-	}
-
-	const { data: existing, error: findError } = await query.maybeSingle();
-
-	if (findError) {
-		return { data: null, error: findError };
-	}
-
-	if (existing) {
-		return { data: { conversationId: existing.id as string }, error: null };
-	}
-
-	// Create new conversation
+	//.. Insert-or-ignore on the (listing_id, buyer_id, seller_id) unique key so
+	//.. repeated "Contact Seller" clicks are idempotent and race-safe — no
+	//.. find-then-insert window. ignoreDuplicates leaves an existing row
+	//.. untouched (we re-select it below) rather than clobbering its
+	//.. unread counters / preview.
 	const { data: created, error: createError } = await supabase
 		.from("conversations")
-		.insert({
-			buyer_id: buyerId,
-			seller_id: sellerId,
-			listing_id: listingId ?? null,
-			last_message_at: new Date().toISOString(),
-			last_message_preview: "",
-			buyer_unread_count: 0,
-			seller_unread_count: 0,
-		})
+		.upsert(
+			{
+				buyer_id: buyerId,
+				seller_id: sellerId,
+				listing_id: listingId ?? null,
+				last_message_at: new Date().toISOString(),
+				last_message_preview: "",
+				unread_count_buyer: 0,
+				unread_count_seller: 0,
+			},
+			{ onConflict: "listing_id,buyer_id,seller_id", ignoreDuplicates: true },
+		)
 		.select("id")
-		.single();
+		.maybeSingle();
 
 	if (createError) {
 		return { data: null, error: createError };
 	}
 
-	return { data: { conversationId: (created as { id: string }).id }, error: null };
+	if (created) {
+		return { data: { conversationId: (created as { id: string }).id }, error: null };
+	}
+
+	//.. Duplicate ignored — the conversation already exists; fetch its id.
+	let existingQuery = supabase
+		.from("conversations")
+		.select("id")
+		.eq("buyer_id", buyerId)
+		.eq("seller_id", sellerId);
+
+	existingQuery = listingId
+		? existingQuery.eq("listing_id", listingId)
+		: existingQuery.is("listing_id", null);
+
+	const { data: existing, error: findError } = await existingQuery.maybeSingle();
+
+	if (findError) {
+		return { data: null, error: findError };
+	}
+
+	if (!existing) {
+		return { data: null, error: new Error("Failed to resolve conversation") };
+	}
+
+	return { data: { conversationId: existing.id as string }, error: null };
 }
 
 // ----------------------------------------------------------------------------
@@ -106,8 +115,8 @@ export async function listConversations(
 			order_id,
 			last_message_at,
 			last_message_preview,
-			buyer_unread_count,
-			seller_unread_count
+			unread_count_buyer,
+			unread_count_seller
 		`)
 		.eq(column, userId)
 		.order("last_message_at", { ascending: false })
@@ -161,8 +170,8 @@ export async function listConversations(
 			orderId: (row.order_id as string | null) ?? null,
 			lastMessageAt: row.last_message_at as string,
 			lastMessagePreview: (row.last_message_preview as string) ?? "",
-			buyerUnreadCount: (row.buyer_unread_count as number) ?? 0,
-			sellerUnreadCount: (row.seller_unread_count as number) ?? 0,
+			buyerUnreadCount: (row.unread_count_buyer as number) ?? 0,
+			sellerUnreadCount: (row.unread_count_seller as number) ?? 0,
 			otherParty: {
 				id: otherPartyId,
 				fullName: profile?.full_name ?? "Unknown",
@@ -211,7 +220,7 @@ export async function getMessages(
 
 	const { data, error } = await supabase
 		.from("messages")
-		.select("id, conversation_id, sender_id, body, attachments, read_at, created_at")
+		.select("id, conversation_id, sender_id, content, attachments, read_at, created_at")
 		.eq("conversation_id", conversationId)
 		.order("created_at", { ascending: true })
 		.range(offset, offset + MESSAGES_PER_PAGE - 1);
@@ -222,7 +231,7 @@ export async function getMessages(
 		id: row.id as string,
 		conversationId: row.conversation_id as string,
 		senderId: row.sender_id as string,
-		body: row.body as string,
+		body: row.content as string,
 		attachments: (row.attachments as string[]) ?? [],
 		readAt: (row.read_at as string | null) ?? null,
 		createdAt: row.created_at as string,
@@ -262,35 +271,28 @@ export async function sendMessage(
 		return { data: null, error: new Error("Unauthorized") };
 	}
 
-	// Insert the message
+	// Insert the message. The `on_new_message` trigger (handle_new_message)
+	// updates the conversation preview + last_message_at, increments the
+	// recipient's unread counter, and inserts their new_message notification —
+	// so no client-side increment/preview RPC is needed here.
 	const { data: msg, error: msgError } = await supabase
 		.from("messages")
 		.insert({
 			conversation_id: conversationId,
 			sender_id: senderId,
-			body,
+			content: body,
 			attachments,
 		})
-		.select("id, conversation_id, sender_id, body, attachments, read_at, created_at")
+		.select("id, conversation_id, sender_id, content, attachments, read_at, created_at")
 		.single();
 
 	if (msgError) return { data: null, error: msgError };
-
-	// Update conversation preview and increment the recipient's unread count
-	const isBuyer = c.buyer_id === senderId;
-	const unreadColumn = isBuyer ? "seller_unread_count" : "buyer_unread_count";
-
-	await supabase.rpc("increment_unread_and_preview", {
-		p_conversation_id: conversationId,
-		p_preview: body.slice(0, 120),
-		p_unread_column: unreadColumn,
-	});
 
 	const row = msg as {
 		id: string;
 		conversation_id: string;
 		sender_id: string;
-		body: string;
+		content: string;
 		attachments: string[];
 		read_at: string | null;
 		created_at: string;
@@ -301,7 +303,7 @@ export async function sendMessage(
 			id: row.id,
 			conversationId: row.conversation_id,
 			senderId: row.sender_id,
-			body: row.body,
+			body: row.content,
 			attachments: row.attachments ?? [],
 			readAt: row.read_at ?? null,
 			createdAt: row.created_at,
@@ -315,18 +317,18 @@ export async function sendMessage(
 // ----------------------------------------------------------------------------
 
 /**
- * Marks all unread messages in a conversation as read for the given user,
- * and resets their unread counter. Calls a Supabase RPC for atomicity.
+ * Marks all unread messages in a conversation as read for the caller, and
+ * resets their unread counter. The `mark_messages_read` RPC derives the user
+ * from auth.uid() (single argument) and enforces participant membership, so the
+ * server client's session is what identifies the reader — no user id is passed.
  */
 export async function markConversationRead(
 	conversationId: string,
-	userId: string,
 ): Promise<{ error: unknown }> {
 	const supabase = await createServerSupabaseClient();
 
 	const { error } = await supabase.rpc("mark_messages_read", {
 		p_conversation_id: conversationId,
-		p_user_id: userId,
 	});
 
 	return { error: error ?? null };

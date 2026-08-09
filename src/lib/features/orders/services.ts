@@ -26,7 +26,7 @@ import { clearCartItems } from "@/lib/features/cart/services";
 import { generateOrderNumber } from "@/lib/utils/order-number";
 
 import type { Order, OrderItem, OrderStatus, OrderStatusEvent } from "@/lib/features/orders/types";
-import type { PlaceOrderInput, ShipOrderInput } from "@/lib/features/orders/schemas";
+import type { PlaceOrderInput } from "@/lib/features/orders/schemas";
 
 // ----------------------------------------------------------------------------
 // State machine
@@ -150,7 +150,7 @@ export async function placeOrder(
 	let shippingAddress = payload.shippingAddress;
 	if (!shippingAddress && payload.shippingAddressId) {
 		const { data: savedAddr } = await admin
-			.from("addresses")
+			.from("saved_addresses")
 			.select("*")
 			.eq("id", payload.shippingAddressId)
 			.eq("user_id", buyerId)
@@ -198,7 +198,10 @@ export async function placeOrder(
 				status,
 				stock,
 				condition,
-				primary_image_url,
+				listing_images (
+						url,
+						position
+					),
 				seller_stores (
 					id,
 					store_name,
@@ -282,12 +285,18 @@ export async function placeOrder(
 		const unitPrice = item.snapshot_price as number;
 		const qty = item.qty as number;
 
+		//.. Primary image = lowest-position row from the embedded listing_images
+		//.. (listings has no primary_image_url column; images live in listing_images).
+		const images = (listing.listing_images as Array<{ url: string; position: number }> | null) ?? [];
+		const primaryImageUrl =
+			images.slice().sort((a, b) => a.position - b.position)[0]?.url ?? null;
+
 		return {
 			order_id: orderId,
 			listing_id: item.listing_id as string,
 			listing_snapshot: {
 				title: listing.title as string,
-				imageUrl: (listing.primary_image_url as string | null) ?? null,
+				imageUrl: primaryImageUrl,
 				condition: (listing.condition as string | null) ?? null,
 			},
 			qty,
@@ -324,13 +333,19 @@ export async function placeOrder(
 		});
 	}
 
-	// 11 — Create escrow transaction
+	// 11 — Create escrow transaction (held).
+	//.. Ledger identity (INDEX §9): seller_payout + platform_fee == amount(total).
+	//.. `type` and `payment_method` are required NOT NULL enums; `ss_status` is
+	//.. the canonical ShopSmart escrow state — the legacy `status` enum keeps its
+	//.. 'pending' default. There are no buyer_id/seller_id columns on this table.
 	await admin.from("escrow_transactions").insert({
 		order_id: orderId,
+		type: "hold",
 		amount: total,
-		status: "held",
-		buyer_id: buyerId,
-		seller_id: payload.cartGroupSellerId,
+		payment_method: payload.paymentMethod,
+		ss_status: "held",
+		seller_payout: total - platformFee,
+		release_trigger: "buyer_confirmation",
 	});
 
 	// 12 — Clear cart items for this seller
@@ -590,10 +605,10 @@ export async function confirmReceipt(
 	const { error } = await transitionOrderStatus(orderId, buyerId, "completed", "Buyer confirmed receipt");
 	if (error) return { error };
 
-	// Release escrow
+	// Release escrow — canonical state is ss_status (held -> released).
 	await admin
 		.from("escrow_transactions")
-		.update({ status: "released", released_at: new Date().toISOString() })
+		.update({ ss_status: "released", released_at: new Date().toISOString() })
 		.eq("order_id", orderId);
 
 	return { error: null };

@@ -32,5 +32,12 @@ export default async function PODetailPage({ params }: PODetailPageProps) {
 
 	if (!order) notFound();
 
+	//.. Ownership guard — closes the IDOR at /wholesale/po/[id]. Only the order's
+	//.. buyer, its seller, or an admin may view the purchase order; everyone else
+	//.. gets notFound() (a 404 that does not leak the order's existence).
+	const o = order as { buyer_id: string; seller_id: string };
+	const isParticipant = o.buyer_id === session.userId || o.seller_id === session.userId;
+	if (!isParticipant && !session.roles.includes("admin")) notFound();
+
 	return <PODetailShell order={order} />;
 }

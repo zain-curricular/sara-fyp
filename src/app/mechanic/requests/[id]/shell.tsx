@@ -9,6 +9,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ChevronLeft, MapPin, Package } from "lucide-react";
@@ -214,13 +215,13 @@ export default function MechanicRequestDetailShell({
 		<div container-id="mechanic-request-detail" className="flex flex-col gap-6">
 
 			{/* Back link */}
-			<a
+			<Link
 				href="/mechanic/requests"
 				className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
 			>
 				<ChevronLeft className="size-4" aria-hidden />
 				Back to requests
-			</a>
+			</Link>
 
 			{/* Header */}
 			<div className="flex flex-wrap items-start justify-between gap-3">
