@@ -55,6 +55,15 @@ export function getEmbeddingsModel(): unknown {
 	return _embeddings;
 }
 
+/**
+ * Reports whether AI features run live (an API key is configured) or degraded
+ * (keyword/heuristic fallbacks). UI surfaces (chatbot, listing wizard) can show
+ * a subtle "AI limited" note instead of silently pretending.
+ */
+export function aiStatus(): "live" | "degraded" {
+	return process.env.OPENAI_API_KEY ? "live" : "degraded";
+}
+
 /** Embed a single text string. Returns null if provider unavailable. */
 export async function embedText(text: string): Promise<number[] | null> {
 	init();

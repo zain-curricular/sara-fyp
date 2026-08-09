@@ -178,3 +178,35 @@ Seller nav now includes Inventory and Bulk Upload (previously orphaned pages).
 `submitVerdict` creates a payout row (flat inspection fee) + notifies the
 mechanic; earnings route reads the correct `transaction_ref` column so the
 earnings screen is real.
+
+---
+
+## Phase 3 — Intelligence (partial — embeddings/recs folded into Phase 4)
+
+Focused on the highest-value, self-contained AI wins. Verified: migration
+`20260809000005_intelligence.sql` applies clean, `tsc` green, lint-clean, and
+`detect_fraud_signals()` runs and produces scored signals. **Fixed another wrong
+column:** the fraud rules used `disputes.buyer_id` (real column is `opened_by`).
+
+### 3.1 — AI provider bring-up
+`aiStatus()` returns `live`/`degraded` from key presence, so UI can show an "AI
+limited" note instead of silently faking it. (`OPENAI_API_KEY` is present, so
+AI runs live.)
+
+### 3.2 — Chatbot
+Works today: P0 fixed its blockers (`chatbot_sessions`, dropped the nonexistent
+`slug`), and with the key present the LangChain pipeline answers over
+keyword-retrieved KB. Vector retrieval lights up once embeddings are backfilled
+(Phase 4).
+
+### 3.6 — Fraud detection live
+`detect_fraud_signals()` SQL function (3 rules — new-seller price outlier, high-
+dispute buyer, general price outlier — each with a 0–1 score, replacing the
+impossible `listing_price_history` rule per §8.8) upserts real `fraud_signals`
+rows on the `(signal_type, subject_id)` key and is **scheduled hourly via
+pg_cron**. The edge worker was also fixed to the real schema as an alternative
+path. The admin fraud dashboard now shows real, scored, colour-coded signals.
+
+**Deferred into Phase 4 (where data is seeded):** embedding backfill + embed-on-
+write (3.3), extended KB + re-embed (3.4). **Deferred as polish:** recommendation
+rails in the homepage UI (3.5) — the endpoints work; no rail consumes them yet.

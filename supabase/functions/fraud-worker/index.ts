@@ -118,14 +118,14 @@ Deno.serve(async (_req) => {
 
 		const { data: disputes } = await supabase
 			.from("disputes")
-			.select("buyer_id")
+			.select("opened_by")
 			.gte("created_at", disputeWindowStart.toISOString());
 
 		if (disputes && disputes.length > 0) {
 			// Count by buyer
 			const counts = new Map<string, number>();
 			for (const d of disputes) {
-				const id = d.buyer_id as string;
+				const id = d.opened_by as string;
 				counts.set(id, (counts.get(id) ?? 0) + 1);
 			}
 
@@ -197,16 +197,21 @@ Deno.serve(async (_req) => {
 
 	for (const signal of signals) {
 		try {
+			// Real fraud_signals shape (subject_*/signal_type/score/status), upserting
+			// on the (signal_type, subject_id) key. The canonical, scheduled path is
+			// the SQL function public.detect_fraud_signals(); this edge function is an
+			// equivalent alternative for rules 1-2 (rule 3 needs a table that does not
+			// exist and is caught above).
 			const { error: insertError } = await supabase.from("fraud_signals").upsert(
 				{
-					rule: signal.rule,
-					target_id: signal.target_id,
-					target_type: signal.target_type,
+					signal_type: signal.rule,
+					subject_id: signal.target_id,
+					subject_type: signal.target_type,
+					score: 0.5,
 					details: signal.details,
-					detected_at: new Date().toISOString(),
-					status: "pending_review",
+					status: "open",
 				},
-				{ onConflict: "rule,target_id" },
+				{ onConflict: "signal_type,subject_id" },
 			);
 
 			if (!insertError) inserted++;
