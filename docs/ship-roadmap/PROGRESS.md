@@ -55,10 +55,17 @@ fraud/auto-release `disputes.buyer_id`→`opened_by` and `under_review`→`revie
 - **Messages unread badge** — new `getUnreadMessageCount` service +
   `/api/conversations/unread-count` route + `MessagesBell` header island (badge,
   realtime + focus refetch), mirroring the notification bell.
+- **Offline images (Supabase Storage)** — a committed 40-image pool
+  (`supabase/seed-data/images/`) + `npm run seed:images` uploads it to the public
+  `listing-images` bucket and repoints all 1116 listing photos + 50 store logos
+  at local Storage (migration 0007 adds the bucket + `set_listing_image_urls`).
+  `next/image` is `unoptimized` in dev (the optimizer blocks loopback hosts);
+  production still optimizes via the `*.supabase.co` pattern. Verified by
+  `storage-images.integration.test.ts` (bucket + setter round-trip). The bare
+  `db reset` keeps the online CDN URLs; the step flips the demo fully offline.
 
-**Remaining follow-up:** listing images still use CDN URLs (loremflickr) rather
-than local Supabase Storage — reliable but needs internet at demo time. See
-`RUNBOOK-demo.md` §6.
+**Remaining follow-ups:** none — all documented follow-ups are landed. Stripe
+Card still uses the in-repo sandbox until `STRIPE_SECRET_KEY` is supplied.
 
 ---
 

@@ -22,7 +22,8 @@
 		"supabase:stop": "supabase stop",
 		"supabase:reset": "supabase db reset",
 		"supabase:gen-types": "supabase gen types typescript --local > src/lib/supabase/database.types.ts",
-		"seed:embeddings": "node supabase/scripts/backfill-embeddings.mjs"
+		"seed:embeddings": "node supabase/scripts/backfill-embeddings.mjs",
+		"seed:images": "node supabase/scripts/upload-images.mjs"
 	},
 	"dependencies": {
 		"@ai-sdk/anthropic": "^3.0.71",

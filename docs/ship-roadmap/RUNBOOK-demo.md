@@ -20,10 +20,15 @@ supabase db reset
 #    after every reset. No-op if OPENAI_API_KEY is unset (app still works).
 npm run seed:embeddings
 
-# 4) Regenerate DB types (only needed if migrations changed)
+# 4) Upload the committed image pool into local Supabase Storage and repoint all
+#    listing photos + store logos at it → fully OFFLINE demo. Idempotent; re-run
+#    after every reset. (Skip it to keep the online loremflickr CDN images.)
+npm run seed:images
+
+# 5) Regenerate DB types (only needed if migrations changed)
 npm run supabase:gen-types
 
-# 5) Start the app (port 3202)
+# 6) Start the app (port 3202)
 npm run dev            # http://localhost:3202
 ```
 
@@ -135,8 +140,12 @@ belonging to an order has a matching payout of exactly `seller_payout` — verif
 - **Mechanic module** — ✅ fixed (post-ship follow-up): both mechanic services +
   the detail page now use the real `mechanic_verifications` table (verdict is
   encoded in `status`). List/accept/verdict + the seeded 24 rows work.
-- **Listing images use CDN URLs** (loremflickr/pravatar), not Supabase Storage —
-  real and reliable but needs internet at demo time. Storage upload is a follow-up.
+- **Listing images** — ✅ can run fully offline. `npm run seed:images` uploads a
+  committed 40-image pool (`supabase/seed-data/images/`) into the public
+  `listing-images` Storage bucket and repoints all 1116 listing photos + 50 store
+  logos at it. `next/image` is `unoptimized` in dev (the optimizer refuses
+  loopback hosts); production keeps optimization via the `*.supabase.co` pattern.
+  Skip the step to keep the online loremflickr CDN images instead.
 - **Embeddings** — ✅ backfilled via `npm run seed:embeddings` (566 listings + 8 KB
   docs, `text-embedding-3-small`, 1536-dim). Vector search / recommendations /
   chatbot RAG run semantically; the SQL/keyword fallbacks remain for the
@@ -154,6 +163,7 @@ belonging to an order has a matching payout of exactly `seller_payout` — verif
 
 - [ ] `supabase start` (55xxx) + `supabase db reset` complete without error
 - [ ] `npm run seed:embeddings` completes (566 listings + 8 KB docs embedded)
+- [ ] `npm run seed:images` completes (pool uploaded; 1116 photos + 50 logos repointed)
 - [ ] `npm run dev` serves on :3202
 - [ ] `npx tsc --noEmit` green · `npm run test` green · `npm run test:integration` green
 - [ ] `npm run lint` 0 errors · `npm run build` passes
