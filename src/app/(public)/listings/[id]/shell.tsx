@@ -15,7 +15,9 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle2, MapPin, ShieldCheck, Star } from "lucide-react";
+import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
+import { CheckCircle2, MapPin, ShieldCheck, Star, Wrench } from "lucide-react";
 
 import type { ListingImageRecord, ListingRecord } from "@/lib/features/listings";
 import type { ReviewsListPayload } from "@/lib/features/reviews/types";
@@ -31,6 +33,9 @@ import { Button, buttonVariants } from "@/components/primitives/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/primitives/card";
 import { Separator } from "@/components/primitives/separator";
 import { Skeleton } from "@/components/primitives/skeleton";
+import { ContactSellerButton } from "@/components/listings/contact-seller-button";
+import { useAddToCart } from "@/lib/features/cart/hooks";
+import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 // ----------------------------------------------------------------------------
 // Types
@@ -77,6 +82,28 @@ const FALLBACK_CHECKS = [
 /** Full-page shell for /listings/[id] — gallery + trust panel + seller card. */
 export default function ListingDetailShell({ listing, images, sellerReviews }: ListingDetailShellProps) {
 	const { data: seller, isLoading: sellerLoading } = usePublicProfile(listing.user_id);
+	const router = useRouter();
+	const addToCart = useAddToCart();
+	const [cartError, setCartError] = useState<string | null>(null);
+
+	//.. Add to cart then go to the cart. Guests are sent to login first.
+	const handleAddToCart = useCallback(async () => {
+		setCartError(null);
+		const supabase = createBrowserSupabaseClient();
+		const {
+			data: { session },
+		} = await supabase.auth.getSession();
+		if (!session) {
+			router.push(`/login?next=/listings/${listing.id}`);
+			return;
+		}
+		try {
+			await addToCart.mutateAsync({ listingId: listing.id, qty: 1 });
+			router.push("/cart");
+		} catch (e) {
+			setCartError(e instanceof Error ? e.message : "Failed to add to cart");
+		}
+	}, [listing.id, addToCart, router]);
 
 	const showBuyNow = listing.sale_type === "fixed" || listing.sale_type === "both";
 	const showAuction = listing.sale_type === "auction" || listing.sale_type === "both";
@@ -186,9 +213,15 @@ export default function ListingDetailShell({ listing, images, sellerReviews }: L
 									{listing.is_negotiable && (
 										<p className="text-xs text-muted-foreground">Price is negotiable</p>
 									)}
-									<Button type="button" className="w-full" disabled>
-										Buy now (escrow)
+									<Button
+										type="button"
+										className="w-full"
+										disabled={addToCart.isPending}
+										onClick={() => void handleAddToCart()}
+									>
+										{addToCart.isPending ? "Adding…" : "Add to cart"}
 									</Button>
+									{cartError && <p className="text-xs text-destructive">{cartError}</p>}
 								</div>
 							)}
 
@@ -222,6 +255,25 @@ export default function ListingDetailShell({ listing, images, sellerReviews }: L
 							<div className="flex items-center gap-2">
 								<FavoriteButton listingId={listing.id} size="icon" />
 								<span className="text-sm text-muted-foreground">Save to favorites</span>
+							</div>
+
+							<Separator />
+
+							{/* Buyer actions: message the seller, or ask a mechanic to inspect */}
+							<div className="flex flex-col gap-2">
+								<ContactSellerButton
+									sellerId={listing.user_id}
+									listingId={listing.id}
+									variant="outline"
+									className="w-full"
+								/>
+								<Link
+									href={`/buyer/mechanic-requests/new?listingId=${listing.id}`}
+									className={`${buttonVariants({ variant: "outline" })} w-full gap-2`}
+								>
+									<Wrench className="size-4" aria-hidden />
+									Request inspection
+								</Link>
 							</div>
 						</CardContent>
 					</Card>

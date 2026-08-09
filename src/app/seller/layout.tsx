@@ -9,6 +9,7 @@ import Link from "next/link";
 import {
 	BarChart2,
 	Box,
+	Boxes,
 	CreditCard,
 	LayoutDashboard,
 	MessageSquare,
@@ -17,6 +18,7 @@ import {
 	ShieldAlert,
 	Star,
 	Store,
+	Upload,
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
@@ -24,6 +26,8 @@ import { AppShell } from "@/components/layout/app-shell";
 const NAV_LINKS = [
 	{ href: "/seller", label: "Dashboard", icon: LayoutDashboard },
 	{ href: "/seller/listings", label: "Listings", icon: Box },
+	{ href: "/seller/inventory", label: "Inventory", icon: Boxes },
+	{ href: "/seller/listings/bulk-upload", label: "Bulk Upload", icon: Upload },
 	{ href: "/seller/orders", label: "Orders", icon: Package },
 	{ href: "/seller/analytics", label: "Analytics", icon: BarChart2 },
 	{ href: "/seller/reviews", label: "Reviews", icon: Star },

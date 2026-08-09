@@ -22,7 +22,7 @@ export async function GET(): Promise<NextResponse> {
 
 	const { data, error } = await supabase
 		.from("payouts")
-		.select("id, amount, status, created_at, reference")
+		.select("id, amount, status, created_at, transaction_ref")
 		.eq("seller_id", auth.userId)
 		.order("created_at", { ascending: false })
 		.limit(200);

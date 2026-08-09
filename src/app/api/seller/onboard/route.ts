@@ -89,12 +89,14 @@ export async function POST(req: NextRequest) {
 		.from("seller_stores")
 		.insert({
 			owner_id: auth.userId,
-			name: storeName,
+			store_name: storeName,
 			slug,
 			city,
 			description,
 			logo_url: logoUrl ?? null,
 			banner_url: bannerUrl ?? null,
+			// approval_status defaults to 'pending' — an admin must approve before
+			// this seller can publish listings (gate enforced at publish).
 		})
 		.select("id, slug")
 		.single();

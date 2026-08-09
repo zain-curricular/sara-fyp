@@ -27,6 +27,9 @@ import type {
 	VerificationVerdict,
 } from "./types";
 
+// Flat inspection fee paid to the mechanic on verdict submission (sandbox).
+const MECHANIC_INSPECTION_FEE = 1500;
+
 // ----------------------------------------------------------------------------
 // Get profile
 // ----------------------------------------------------------------------------
@@ -233,6 +236,16 @@ export async function acceptRequest(
 ): Promise<{ error: unknown }> {
 	const admin = createAdminSupabaseClient();
 
+	//.. Gate (2.6): only admin-verified mechanics may accept jobs.
+	const { data: mech } = await admin
+		.from("mechanics")
+		.select("verified_at")
+		.eq("id", mechanicId)
+		.maybeSingle();
+	if (!mech || (mech as { verified_at: string | null }).verified_at == null) {
+		return { error: new Error("Your mechanic account is pending admin verification.") };
+	}
+
 	// Fetch request to get buyer_id
 	const { data: req, error: fetchError } = await admin
 		.from("verification_requests")
@@ -307,6 +320,28 @@ export async function submitVerdict(
 
 	// Increment mechanic's total_jobs
 	await admin.rpc("increment_mechanic_jobs", { p_mechanic_id: mechanicId });
+
+	//.. Pay the mechanic their inspection fee (2.6). Flat sandbox fee; the
+	//.. earnings route reads payouts by seller_id = mechanic user id. order_id is
+	//.. NULL (this is an inspection, not an order).
+	const today = new Date().toISOString().slice(0, 10);
+	await admin.from("payouts").insert({
+		seller_id: mechanicId,
+		amount: MECHANIC_INSPECTION_FEE,
+		period_start: today,
+		period_end: today,
+		status: "pending",
+		method: "bank_transfer",
+	});
+
+	await admin.from("notifications").insert({
+		user_id: mechanicId,
+		type: "payout_paid",
+		title: "Inspection fee earned",
+		body: `You earned PKR ${MECHANIC_INSPECTION_FEE.toLocaleString("en-US")} for completing a verification.`,
+		entity_type: "verification_request",
+		entity_id: requestId,
+	});
 
 	// Notify buyer
 	const verdictLabel =

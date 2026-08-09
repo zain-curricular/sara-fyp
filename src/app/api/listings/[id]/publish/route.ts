@@ -70,9 +70,39 @@ export async function POST(
 		);
 	}
 
+	//.. Trust gates (sellers only; admins publish directly to active):
+	//..  1. the seller's store must be admin-approved (2.1)
+	//..  2. payout details must be on file (2.2)
+	//.. A seller publish then lands in pending_review for moderation (2.3);
+	//.. only an admin approval flips it to active/buyer-visible.
+	let nextStatus = "active";
+	if (!isAdmin) {
+		const { data: store } = await supabase
+			.from("seller_stores")
+			.select("approval_status, payout_details")
+			.eq("owner_id", row.user_id)
+			.maybeSingle();
+
+		const s = store as { approval_status: string; payout_details: unknown } | null;
+
+		if (!s || s.approval_status !== "approved") {
+			return NextResponse.json(
+				{ ok: false, error: "Your store is pending admin approval — you can publish once it's approved." },
+				{ status: 422 },
+			);
+		}
+		if (s.payout_details == null) {
+			return NextResponse.json(
+				{ ok: false, error: "Add your payout details before publishing.", setupUrl: "/seller/payouts/setup" },
+				{ status: 422 },
+			);
+		}
+		nextStatus = "pending_review";
+	}
+
 	const { data: updated, error: updateError } = await supabase
 		.from("listings")
-		.update({ status: "active" })
+		.update({ status: nextStatus })
 		.eq("id", id)
 		.select("*")
 		.single();

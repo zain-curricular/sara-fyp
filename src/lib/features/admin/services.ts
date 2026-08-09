@@ -418,22 +418,42 @@ export async function setSellerVerified(
 ): Promise<{ error: unknown }> {
 	const supabase = createAdminSupabaseClient();
 
-	const { error } = await supabase
+	//.. Map the admin toggle onto the approval workflow (2.1): verify => approved,
+	//.. unverify => rejected. Keep the legacy `verified` flag in sync.
+	const approvalStatus = verified ? "approved" : "rejected";
+
+	const { data: store, error } = await supabase
 		.from("seller_stores")
-		.update({ verified })
-		.eq("id", sellerId);
+		.update({ verified, approval_status: approvalStatus })
+		.eq("id", sellerId)
+		.select("owner_id, store_name")
+		.single();
 
-	if (!error) {
-		await supabase.from("admin_actions").insert({
-			admin_id: adminId,
-			target_type: "seller",
-			target_id: sellerId,
-			action_type: verified ? "verify_seller" : "unverify_seller",
-			note: null,
-		});
-	}
+	if (error) return { error };
 
-	return { error };
+	const s = store as { owner_id: string; store_name: string };
+
+	// Notify the seller of the decision.
+	await supabase.from("notifications").insert({
+		user_id: s.owner_id,
+		type: verified ? "seller_approved" : "seller_rejected",
+		title: verified ? "Store approved" : "Store not approved",
+		body: verified
+			? `Your store "${s.store_name}" is approved — you can publish listings now.`
+			: `Your store "${s.store_name}" was not approved. Please review your details and resubmit.`,
+		entity_type: "seller",
+		entity_id: sellerId,
+	});
+
+	await supabase.from("admin_actions").insert({
+		admin_id: adminId,
+		target_type: "seller",
+		target_id: sellerId,
+		action_type: verified ? "verify_seller" : "unverify_seller",
+		note: null,
+	});
+
+	return { error: null };
 }
 
 // ============================================================================

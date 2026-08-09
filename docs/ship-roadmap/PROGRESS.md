@@ -132,3 +132,49 @@ payout. Delivery uses the existing status-change notification.
 + `.env`) so it coexists with the user's other Supabase project on the default
 ports. Stripe test keys (`STRIPE_SECRET_KEY`, optional `STRIPE_CURRENCY`) go in
 `.env` when available.
+
+---
+
+## Phase 2 — Marketplace gating & connective tissue
+
+The three trust gates are enforced and orphaned entry points are wired.
+Verified: `supabase db reset` clean (migration `20260809000004_marketplace_gates.sql`),
+`tsc` green, Phase 2 files lint-clean, DB functional checks pass (store defaults
+`pending`, reject-with-reason, `seller_approved` notification, `payout_details`
+round-trip). **Also fixed three latent bugs the audit missed:** `onboard` inserted
+`name` (column is `store_name`) — seller onboarding was broken; `rejectListing`
+wrote `status:'rejected'` (not an enum member) + `rejection_reason` (missing
+column); the mechanic earnings route selected `reference` (column is
+`transaction_ref`).
+
+### 2.1 — Seller approval gate
+New stores default to `approval_status='pending'`. Admin verify → `approved`
+(+`verified`), unverify → `rejected`, each firing a `seller_approved`/
+`seller_rejected` notification. Publish is gated on approval.
+
+### 2.2 — Payout-setup gate
+New `PATCH /api/seller/payout` validates bank/wallet details (IBAN-ish / 03xx
+mobile) and writes `seller_stores.payout_details`; the setup shell posts there
+instead of profile metadata. Publish requires non-null payout details.
+
+### 2.3 — Listing moderation
+Seller publish now transitions to `pending_review` (gated on approved store +
+payout details); admin approve → `active`, reject → `rejected` + reason +
+notification. Migration adds the `rejected` listing_status member and
+`listings.rejection_reason`.
+
+### 2.4 — Listing-page CTAs
+The listing detail page now has a working **Add to cart** (the commerce flow was
+previously unreachable — the buy button was disabled), a **Contact seller**
+button (0.1 conversation upsert), and a **Request inspection** link to the
+mechanic flow. *(Compatibility panel deferred.)*
+
+### 2.5 — Navigation
+Seller nav now includes Inventory and Bulk Upload (previously orphaned pages).
+*(Messages unread badge deferred.)*
+
+### 2.6 — Mechanic completeness
+`acceptRequest` gated on `verified_at` (unverified mechanics can't accept);
+`submitVerdict` creates a payout row (flat inspection fee) + notifies the
+mechanic; earnings route reads the correct `transaction_ref` column so the
+earnings screen is real.

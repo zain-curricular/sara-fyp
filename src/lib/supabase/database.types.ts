@@ -1003,6 +1003,7 @@ export type Database = {
           platform: Database["public"]["Enums"]["platform_type"]
           price: number
           published_at: string | null
+          rejection_reason: string | null
           sale_type: Database["public"]["Enums"]["sale_type"]
           search_vector: unknown
           slug: string | null
@@ -1042,6 +1043,7 @@ export type Database = {
           platform: Database["public"]["Enums"]["platform_type"]
           price: number
           published_at?: string | null
+          rejection_reason?: string | null
           sale_type?: Database["public"]["Enums"]["sale_type"]
           search_vector?: unknown
           slug?: string | null
@@ -1081,6 +1083,7 @@ export type Database = {
           platform?: Database["public"]["Enums"]["platform_type"]
           price?: number
           published_at?: string | null
+          rejection_reason?: string | null
           sale_type?: Database["public"]["Enums"]["sale_type"]
           search_vector?: unknown
           slug?: string | null
@@ -2164,6 +2167,7 @@ export type Database = {
       }
       seller_stores: {
         Row: {
+          approval_status: string
           banner_url: string | null
           city: string | null
           created_at: string
@@ -2171,6 +2175,7 @@ export type Database = {
           id: string
           logo_url: string | null
           owner_id: string
+          payout_details: Json | null
           rating: number
           review_count: number
           slug: string
@@ -2178,6 +2183,7 @@ export type Database = {
           verified: boolean
         }
         Insert: {
+          approval_status?: string
           banner_url?: string | null
           city?: string | null
           created_at?: string
@@ -2185,6 +2191,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           owner_id: string
+          payout_details?: Json | null
           rating?: number
           review_count?: number
           slug: string
@@ -2192,6 +2199,7 @@ export type Database = {
           verified?: boolean
         }
         Update: {
+          approval_status?: string
           banner_url?: string | null
           city?: string | null
           created_at?: string
@@ -2199,6 +2207,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           owner_id?: string
+          payout_details?: Json | null
           rating?: number
           review_count?: number
           slug?: string
@@ -3045,6 +3054,7 @@ export type Database = {
         | "expired"
         | "removed"
         | "flagged"
+        | "rejected"
       notification_type:
         | "new_message"
         | "outbid"
@@ -3061,6 +3071,8 @@ export type Database = {
         | "order_delivered"
         | "escrow_released"
         | "payout_paid"
+        | "seller_approved"
+        | "seller_rejected"
       order_status:
         | "awaiting_payment"
         | "payment_received"
@@ -3239,6 +3251,7 @@ export const Constants = {
         "expired",
         "removed",
         "flagged",
+        "rejected",
       ],
       notification_type: [
         "new_message",
@@ -3256,6 +3269,8 @@ export const Constants = {
         "order_delivered",
         "escrow_released",
         "payout_paid",
+        "seller_approved",
+        "seller_rejected",
       ],
       order_status: [
         "awaiting_payment",

@@ -64,16 +64,14 @@ export default function PayoutSetupShell({ settings }: { settings: PayoutSetting
 		setBusy(true);
 
 		try {
-			const res = await fetch("/api/auth/me", {
+			const res = await fetch("/api/seller/payout", {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
-					metadata: {
-						payout_method: method,
-						payout_account_title: accountTitle,
-						payout_account_number: accountNumber,
-						payout_bank_name: bankName,
-					},
+					method,
+					accountTitle,
+					accountNumber,
+					bankName,
 				}),
 			});
 
