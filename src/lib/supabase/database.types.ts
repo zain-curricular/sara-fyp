@@ -2941,6 +2941,7 @@ export type Database = {
         }
         Returns: string
       }
+      detect_fraud_signals: { Args: never; Returns: number }
       expire_ended_auctions: { Args: never; Returns: undefined }
       expire_stale_listings: { Args: never; Returns: undefined }
       expire_warranties: { Args: never; Returns: undefined }
@@ -3017,6 +3018,8 @@ export type Database = {
           title: string
         }[]
       }
+      set_kb_embeddings: { Args: { items: Json }; Returns: number }
+      set_listing_embeddings: { Args: { items: Json }; Returns: number }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       transition_order: {

@@ -185,6 +185,40 @@ export async function listConversations(
 }
 
 // ----------------------------------------------------------------------------
+// Total unread message count (header badge)
+// ----------------------------------------------------------------------------
+
+/**
+ * Sums a user's unread messages across every conversation: the buyer-side
+ * counter for conversations where they are the buyer, plus the seller-side
+ * counter where they are the seller. Powers the site-header messages badge.
+ */
+export async function getUnreadMessageCount(
+	userId: string,
+): Promise<{ data: number; error: unknown }> {
+	const supabase = await createServerSupabaseClient();
+
+	const { data, error } = await supabase
+		.from("conversations")
+		.select("buyer_id, seller_id, unread_count_buyer, unread_count_seller")
+		.or(`buyer_id.eq.${userId},seller_id.eq.${userId}`)
+		.limit(500);
+
+	if (error) {
+		return { data: 0, error };
+	}
+
+	// Count only the side the caller actually occupies in each conversation.
+	const total = (data ?? []).reduce((sum, row) => {
+		const asBuyer = row.buyer_id === userId ? ((row.unread_count_buyer as number) ?? 0) : 0;
+		const asSeller = row.seller_id === userId ? ((row.unread_count_seller as number) ?? 0) : 0;
+		return sum + asBuyer + asSeller;
+	}, 0);
+
+	return { data: total, error: null };
+}
+
+// ----------------------------------------------------------------------------
 // Get messages in a conversation
 // ----------------------------------------------------------------------------
 

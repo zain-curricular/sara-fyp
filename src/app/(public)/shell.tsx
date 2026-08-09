@@ -10,21 +10,16 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Banknote, BadgeCheck, Clock, Shield } from "lucide-react";
+import { ArrowRight, Banknote, BadgeCheck, Shield } from "lucide-react";
 
 import { Badge } from "@/components/primitives/badge";
 import { buttonVariants } from "@/components/primitives/button";
 import { Card, CardContent } from "@/components/primitives/card";
 import { cn } from "@/lib/utils";
 
-// ── Static placeholder data (real data fed via page.tsx props later) ─────────
+import { ForYouRail, HomeListingCard, type RailListing } from "./_components/home-rails";
 
-const recentParts = [
-	{ id: 1, name: "Toyota Corolla", part: "Alternator", condition: "Used", price: 4800, timeLeft: "4h 12m" },
-	{ id: 2, name: "Honda Civic", part: "Brake Caliper", condition: "New", price: 2200, timeLeft: "5h 35m" },
-	{ id: 3, name: "Suzuki Cultus", part: "Radiator", condition: "Used", price: 3500, timeLeft: "6h 04m" },
-	{ id: 4, name: "KIA Sportage", part: "Strut Assembly", condition: "New", price: 7400, timeLeft: "7h 48m" },
-] as const;
+// ── Static content (brand chips + trust points) ─────────────────────────────
 
 const brandChips = [
 	{ label: "Toyota", count: "2,340", href: "/browse?brand=toyota" },
@@ -60,7 +55,7 @@ const trustPoints = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function HomeShell() {
+export default function HomeShell({ recentListings }: { recentListings: RailListing[] }) {
 	return (
 		<div container-id="home-shell" className="flex flex-col gap-16">
 
@@ -141,65 +136,32 @@ export default function HomeShell() {
 				</Link>
 			</section>
 
-			{/* ── Recently listed ───────────────────────────────────────────── */}
-			<section container-id="home-parts" className="flex flex-col gap-5">
-				<div className="flex items-center justify-between">
-					<h2 className="text-xl font-semibold tracking-tight">Recently listed</h2>
-					<Link
-						href="/browse?sort=newest"
-						className="text-xs text-muted-foreground transition-colors hover:text-foreground"
-					>
-						See all →
-					</Link>
-				</div>
+			{/* ── Recommended for you (client island, auth-gated) ───────────── */}
+			<ForYouRail />
 
-				<div
-					container-id="home-parts-grid"
-					className="grid grid-cols-2 gap-4 lg:grid-cols-4"
-				>
-					{recentParts.map((item) => (
-						<Link key={item.id} href={`/browse`}>
-							<Card className="cursor-pointer transition-shadow hover:shadow-md">
-								<CardContent className="flex flex-col gap-3 p-4">
-									{/* Image placeholder */}
-									<div className="aspect-square rounded-lg border border-dashed border-border bg-muted/30" />
-
-									{/* Badges */}
-									<div className="flex flex-wrap gap-1.5">
-										<Badge variant="secondary" className="rounded-sm text-[10px]">
-											{item.condition}
-										</Badge>
-										<Badge className="rounded-sm text-[10px]">
-											LIVE
-										</Badge>
-									</div>
-
-									{/* Vehicle + part */}
-									<div className="flex flex-col gap-0.5">
-										<p className="text-sm font-semibold leading-tight">
-											{item.part}
-										</p>
-										<p className="text-xs text-muted-foreground">
-											{item.name}
-										</p>
-									</div>
-
-									{/* Price + timestamp */}
-									<div className="flex items-center justify-between">
-										<span className="text-base font-bold tabular-nums text-primary">
-											Rs {item.price.toLocaleString()}
-										</span>
-										<span className="flex items-center gap-1 text-xs text-muted-foreground">
-											<Clock className="size-3" />
-											{item.timeLeft}
-										</span>
-									</div>
-								</CardContent>
-							</Card>
+			{/* ── Recently listed (real inventory) ──────────────────────────── */}
+			{recentListings.length > 0 && (
+				<section container-id="home-parts" className="flex flex-col gap-5">
+					<div className="flex items-center justify-between">
+						<h2 className="text-xl font-semibold tracking-tight">Recently listed</h2>
+						<Link
+							href="/browse?sort=newest"
+							className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+						>
+							See all →
 						</Link>
-					))}
-				</div>
-			</section>
+					</div>
+
+					<div
+						container-id="home-parts-grid"
+						className="grid grid-cols-2 gap-4 lg:grid-cols-4"
+					>
+						{recentListings.map((listing) => (
+							<HomeListingCard key={listing.id} listing={listing} />
+						))}
+					</div>
+				</section>
+			)}
 
 			{/* ── Trust signals ─────────────────────────────────────────────── */}
 			<section container-id="home-trust" className="flex flex-col gap-5 pb-4">

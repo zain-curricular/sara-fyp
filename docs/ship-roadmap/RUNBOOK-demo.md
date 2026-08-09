@@ -15,10 +15,15 @@ supabase start
 #    (supabase/seed.sql + supabase/seed-data/demo.sql are both wired in)
 supabase db reset
 
-# 3) Regenerate DB types (only needed if migrations changed)
+# 3) Backfill embeddings (one OpenAI pass — lights up semantic search / recs /
+#    chatbot RAG). Idempotent: only fills rows where embedding IS NULL, so re-run
+#    after every reset. No-op if OPENAI_API_KEY is unset (app still works).
+npm run seed:embeddings
+
+# 4) Regenerate DB types (only needed if migrations changed)
 npm run supabase:gen-types
 
-# 4) Start the app (port 3202)
+# 5) Start the app (port 3202)
 npm run dev            # http://localhost:3202
 ```
 
@@ -98,7 +103,8 @@ with photos; 23 pending review; 11 rejected) · 303 orders across every status
 ### AI assistant
 - Open the chatbot (widget / `/assistant`). Ask e.g. *"How does escrow work?"* or
   *"Which oil filter fits a Suzuki Mehran?"* — it answers over the knowledge base.
-  (Vector retrieval activates after an embeddings backfill; keyword + LLM works now.)
+  **Vector retrieval is live** once `npm run seed:embeddings` has run (kb + all 566
+  listings embedded, 1536-dim); without it, keyword + LLM still answer.
 
 ### Cron (auto-release) — optional live proof
 ```sql
@@ -131,9 +137,10 @@ belonging to an order has a matching payout of exactly `seller_payout` — verif
   encoded in `status`). List/accept/verdict + the seeded 24 rows work.
 - **Listing images use CDN URLs** (loremflickr/pravatar), not Supabase Storage —
   real and reliable but needs internet at demo time. Storage upload is a follow-up.
-- **Embeddings not backfilled** — `listings.embedding` is NULL, so vector search /
-  recommendations use SQL/keyword fallbacks (which work). A one-time OpenAI
-  backfill enables semantic search.
+- **Embeddings** — ✅ backfilled via `npm run seed:embeddings` (566 listings + 8 KB
+  docs, `text-embedding-3-small`, 1536-dim). Vector search / recommendations /
+  chatbot RAG run semantically; the SQL/keyword fallbacks remain for the
+  no-key / pre-backfill case. Verified by `vector-search.integration.test.ts`.
 - **Payment ordering** (INDEX §8.1): payment is taken at checkout (industry norm),
   not after seller acceptance as the proposal text implies. COD pays on delivery.
 - **Recommendation rails** (3.5) and **messages unread badge** (2.5) deferred as
@@ -146,6 +153,7 @@ belonging to an order has a matching payout of exactly `seller_payout` — verif
 ## 7. Release checklist
 
 - [ ] `supabase start` (55xxx) + `supabase db reset` complete without error
+- [ ] `npm run seed:embeddings` completes (566 listings + 8 KB docs embedded)
 - [ ] `npm run dev` serves on :3202
 - [ ] `npx tsc --noEmit` green · `npm run test` green · `npm run test:integration` green
 - [ ] `npm run lint` 0 errors · `npm run build` passes

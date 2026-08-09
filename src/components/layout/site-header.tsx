@@ -10,12 +10,13 @@
 // NotificationBell client island for the realtime subscription.
 
 import Link from "next/link";
-import { MessageSquare, Search, Heart, ShoppingCart } from "lucide-react";
+import { Search, Heart, ShoppingCart } from "lucide-react";
 
 import { buttonVariants } from "@/components/primitives/button";
 import { cn } from "@/lib/utils";
 
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { MessagesBell } from "@/components/layout/messages-bell";
 
 const navLinks = [
 	{ label: "Browse", href: "/browse" },
@@ -90,14 +91,8 @@ export function SiteHeader() {
 						<Search className="size-4" />
 					</Link>
 
-					{/* Messages */}
-					<Link
-						href="/messages"
-						className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}
-						aria-label="Messages"
-					>
-						<MessageSquare className="size-4" />
-					</Link>
+					{/* Messages (client island — unread badge) */}
+					<MessagesBell />
 
 					{/* Notification bell (client island — realtime + badge) */}
 					<NotificationBell />

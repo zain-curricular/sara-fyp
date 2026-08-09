@@ -39,13 +39,26 @@ green (unit) · `npm run test:integration` green (money identity 120/120).
 invalid enum + missing column, mechanic earnings `reference`→`transaction_ref`,
 fraud/auto-release `disputes.buyer_id`→`opened_by` and `under_review`→`reviewing`.
 
-**Post-ship follow-up done:** the mechanic module (both services + detail page)
-was reconciled to the real `mechanic_verifications` table (they queried phantom
-`verification_requests` / `mechanic_requests`); list/accept/verdict now work.
+**Post-ship follow-ups done:**
+- **Mechanic module** reconciled to the real `mechanic_verifications` table (both
+  services + detail page queried phantom tables); list/accept/verdict now work.
+- **Embeddings backfilled** — `npm run seed:embeddings` (new re-runnable Node
+  script + `set_listing_embeddings` / `set_kb_embeddings` RPCs) embeds all 566
+  listings + 8 KB docs (`text-embedding-3-small`, 1536-dim). Semantic search /
+  recommendations / chatbot RAG now run on real vectors; proven by
+  `vector-search.integration.test.ts` (setter→column→cosine round-trip).
+- **Recommendation rails + real homepage** — the landing page now server-renders
+  live "Recently listed" inventory **with real photos** (was static placeholders)
+  and a self-hiding "Recommended for you" rail (`/api/recommendations/for-you`,
+  pgvector-backed). `next.config` now allows the image hosts (this also fixes the
+  pre-existing "Similar parts" rail, which could not render before).
+- **Messages unread badge** — new `getUnreadMessageCount` service +
+  `/api/conversations/unread-count` route + `MessagesBell` header island (badge,
+  realtime + focus refetch), mirroring the notification bell.
 
-**Remaining follow-ups:** listing images use CDN URLs not Supabase Storage;
-embeddings not backfilled (fallbacks work); recs rails + messages badge deferred
-as polish. See `RUNBOOK-demo.md` §6.
+**Remaining follow-up:** listing images still use CDN URLs (loremflickr) rather
+than local Supabase Storage — reliable but needs internet at demo time. See
+`RUNBOOK-demo.md` §6.
 
 ---
 
