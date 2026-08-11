@@ -19,7 +19,8 @@ type ToggleState = {
 };
 
 /**
- * Wishlist toggle for a listing — loads favorited flag when signed in, POST /api/favorites to toggle.
+ * Wishlist toggle for a listing — loads favorited flag when signed in, POST
+ * /api/listings/[id]/favorites to toggle.
  * When signed out, `toggle` sends the user to `/login`.
  */
 export function useToggleFavorite(listingId: string): ToggleState {
@@ -80,18 +81,17 @@ export function useToggleFavorite(listingId: string): ToggleState {
 
 		setIsPending(true);
 		try {
-			const res = await sessionFetch<{ ok: true; data: { is_favorited: boolean } } | { ok: false }>(
-				`/api/favorites`,
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ listing_id: listingId }),
-				},
+			const res = await sessionFetch<{ ok: true; data: { favorited: boolean } } | { ok: false }>(
+				`/api/listings/${encodeURIComponent(listingId)}/favorites`,
+				{ method: "POST" },
 			);
 			if (res.ok && "data" in res) {
-				setIsFavorited(res.data.is_favorited);
+				setIsFavorited(res.data.favorited);
 				router.refresh();
 			}
+		} catch (e) {
+			// Toggle failures leave the button on its last known state — no throw to the click handler.
+			console.error("[useToggleFavorite] toggle failed", e);
 		} finally {
 			setIsPending(false);
 		}
