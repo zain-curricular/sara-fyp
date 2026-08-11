@@ -19,7 +19,12 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { embedText } from "@/lib/ai/provider";
 
-import type { ChatMessage } from "./types";
+import { tokenize, rankByTokens } from "./keywords";
+import type { ChatMessage, ContextListing, KbDoc } from "./types";
+
+export { buildOfflineReply } from "./offline-responder";
+export type { OfflineReply } from "./offline-responder";
+export type { ContextListing, KbDoc } from "./types";
 
 // ----------------------------------------------------------------------------
 // Session management
@@ -101,6 +106,12 @@ export async function appendMessage(
 // Context retrieval (RAG)
 // ----------------------------------------------------------------------------
 
+/** Rows pulled from the keyword path before local relevance ranking. */
+const KEYWORD_CANDIDATES = 10;
+
+/** Documents/listings handed to the responder after ranking. */
+const CONTEXT_LIMIT = 3;
+
 /**
  * Retrieves relevant context for a user query using vector similarity search.
  * Returns top-3 KB documents and top-3 active listings by embedding cosine distance.
@@ -134,54 +145,53 @@ export async function retrieveContext(query: string): Promise<{
 		}
 	}
 
-	// Fallback: text search
-	const queryWords = query
-		.toLowerCase()
-		.replace(/[^a-z0-9\s]/g, "")
-		.split(/\s+/)
-		.filter(Boolean)
-		.slice(0, 5);
+	// Fallback: keyword search.
+	//
+	// Tokens are stopword-stripped and alphanumeric-only (see `tokenize`), which
+	// makes them safe to interpolate into the filters built below.
+	const tokens = tokenize(query, 5);
 
-	const searchTerm = queryWords.join(" | ");
+	if (tokens.length === 0) return { kbDocs: [], listings: [] };
 
+	// Match if ANY token appears, and search titles as well as bodies: the
+	// shipping article says "delivery" only in its title, so a content-only
+	// filter never surfaced it for "how long does delivery take".
+	const kbFilter = tokens
+		.flatMap((t) => [`title.ilike.%${t}%`, `content.ilike.%${t}%`])
+		.join(",");
+
+	// Match a listing whose title contains ANY token, not just the first one
+	const titleFilter = tokens.map((t) => `title.ilike.%${t}%`).join(",");
+
+	// Over-fetch, then rank locally. Postgres returns keyword matches unordered,
+	// so a bare `.limit(3)` keeps an arbitrary three — which is how "how long
+	// does delivery take" surfaced the escrow article over the shipping one.
 	const [kbResult, listingsResult] = await Promise.all([
 		supabase
 			.from("kb_documents")
 			.select("id, title, content")
-			.textSearch("content", searchTerm, { type: "websearch" })
-			.limit(3),
+			.or(kbFilter)
+			.limit(KEYWORD_CANDIDATES),
 		supabase
 			.from("listings")
 			.select("id, title, price, city, condition")
 			.eq("status", "active")
-			.ilike("title", `%${queryWords[0] ?? query}%`)
-			.limit(3),
+			.or(titleFilter)
+			.limit(KEYWORD_CANDIDATES),
 	]);
 
+	const rankedKb = rankByTokens(mapKbDocs(kbResult.data ?? []), tokens);
+	const rankedListings = rankByTokens(mapListings(listingsResult.data ?? []), tokens);
+
 	return {
-		kbDocs: mapKbDocs(kbResult.data ?? []),
-		listings: mapListings(listingsResult.data ?? []),
+		kbDocs: rankedKb.slice(0, CONTEXT_LIMIT),
+		listings: rankedListings.slice(0, CONTEXT_LIMIT),
 	};
 }
 
 // ----------------------------------------------------------------------------
-// Internal types + mappers
+// Mappers
 // ----------------------------------------------------------------------------
-
-export type KbDoc = {
-	id: string;
-	title: string;
-	content: string;
-	slug: string | null;
-};
-
-export type ContextListing = {
-	id: string;
-	title: string;
-	price: number;
-	city: string;
-	condition: string;
-};
 
 function mapKbDocs(rows: unknown[]): KbDoc[] {
 	return (rows as Record<string, unknown>[]).map((r) => ({

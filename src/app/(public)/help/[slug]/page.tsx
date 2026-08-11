@@ -61,7 +61,7 @@ const SECTIONS: Record<string, { title: string; description: string; faqs: FAQ[]
 			},
 			{
 				q: "What fee does ShopSmart charge?",
-				a: "ShopSmart charges a 5% platform fee on each successful sale. There are no listing fees.",
+				a: "ShopSmart charges a 3% platform fee on each successful sale. There are no listing fees.",
 			},
 			{
 				q: "How quickly do I get paid?",

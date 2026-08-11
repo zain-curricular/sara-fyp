@@ -4,8 +4,10 @@
 //
 // Compact card for displaying a listing in grid/list views. Renders an image
 // placeholder, condition + sale-type badges, title, price, and a city/favorite
-// footer row. The FavoriteButton click is isolated from the Link navigation via
-// stopPropagation on the CardAction wrapper.
+// footer row.
+//
+// Stays a server component so RSC pages can render it directly — the favorite
+// button owns its own click isolation from the enclosing Link.
 //
 
 
@@ -89,13 +91,7 @@ export function ListingCard({ listing, className }: ListingCardProps) {
 					<div className="flex items-center justify-between">
 						<span className="text-xs text-muted-foreground">{listing.city}</span>
 
-						<CardAction
-							className="z-10"
-							onClick={(e) => {
-								e.preventDefault();
-								e.stopPropagation();
-							}}
-						>
+						<CardAction className="z-10">
 							<FavoriteButton listingId={listing.id} size="icon-sm" />
 						</CardAction>
 					</div>

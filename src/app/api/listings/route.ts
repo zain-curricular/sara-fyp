@@ -8,16 +8,20 @@
 //        metadata.
 //
 // POST:  Creates a new listing row owned by the authenticated user. Requires
-//        seller role. Body is validated with an inline Zod schema covering
-//        the insertable listing columns (images inserted into listing_images
-//        via a follow-up batch insert).
+//        seller role. Body is validated with `createListingWizardSchema` —
+//        the same schema the client wizard types its payload against —
+//        extended with the optional columns the wizard does not collect
+//        (images are inserted into listing_images via a follow-up batch).
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { uuid } from "@/lib/validation/uuid";
 
 import { authenticateRequest } from "@/lib/auth/guards";
-import { listingsSearchParamsSchema } from "@/lib/features/listings/schemas";
+import {
+	createListingWizardSchema,
+	listingsSearchParamsSchema,
+} from "@/lib/features/listings/schemas";
 import { searchListingsPublic } from "@/lib/features/listings/services";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -55,21 +59,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 // POST — create listing
 // ----------------------------------------------------------------------------
 
-const CreateListingSchema = z.object({
-	title: z.string().min(3).max(120),
-	description: z.string().max(2000).optional(),
-	price: z.number().positive(),
-	compare_at_price: z.number().positive().optional(),
-	condition: z.enum(["new", "used", "refurbished", "oem", "aftermarket"]),
-	category_id: uuid(),
-	part_category_id: uuid().optional(),
-	model_id: uuid().optional(),
-	city: z.string().min(2),
-	area: z.string().optional(),
-	stock: z.number().int().min(1).default(1),
-	min_order_qty: z.number().int().min(1).default(1),
+// Derived from the shared wizard schema so the client body type and the route
+// contract can never drift apart. Extras below are columns the wizard does not
+// collect but other seller surfaces (wholesale, bulk import) may send.
+const CreateListingSchema = createListingWizardSchema.extend({
+	compare_at_price: z.number().positive().nullable().optional(),
+	part_category_id: uuid().nullable().optional(),
+	stock: z.number().int().min(1).max(10_000).default(1),
+	min_order_qty: z.number().int().min(1).max(10_000).default(1),
 	is_wholesale: z.boolean().default(false),
-	images: z.array(z.string()).max(8).default([]),
+	images: z.array(z.string().max(2000)).max(8).default([]),
 });
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -96,8 +95,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
 	const parsed = CreateListingSchema.safeParse(body);
 	if (!parsed.success) {
+		// Surface the offending field — a bare "Invalid input" is undebuggable
+		// from the wizard's error banner.
+		const issue = parsed.error.issues[0];
+		const field = issue?.path.join(".");
 		return NextResponse.json(
-			{ ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" },
+			{
+				ok: false,
+				error: issue
+					? `${field ? `${field}: ` : ""}${issue.message}`
+					: "Invalid input",
+			},
 			{ status: 422 },
 		);
 	}

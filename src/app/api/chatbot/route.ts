@@ -10,7 +10,7 @@
 //   2. Persist user message
 //   3. Retrieve context via vector/text search (RAG)
 //   4. Build system prompt with context
-//   5. If model unavailable → stub response
+//   5. If model unavailable → extractive reply built from the retrieved context
 //   6. Invoke LangChain, persist reply + citations
 //   7. Return { ok, data: { response, citations, sessionId } }
 //
@@ -25,6 +25,7 @@ import {
 	createOrGetSession,
 	appendMessage,
 	retrieveContext,
+	buildOfflineReply,
 } from "@/lib/features/chatbot/services";
 import type { Citation } from "@/lib/features/chatbot/types";
 
@@ -124,20 +125,26 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 		})),
 	];
 
-	// 5. Check AI availability
+	// 5. Check AI availability — with no model, answer extractively from the
+	//    context RAG already retrieved rather than dead-ending the user.
 	const chatModel = getChatModel();
 
 	if (!chatModel) {
-		const stubResponse =
-			"I'm currently unavailable. Please contact the seller directly or browse our listings.";
+		const offline = buildOfflineReply({ message, kbDocs, listings });
+
 		await appendMessage(sessionId, {
 			role: "assistant",
-			content: stubResponse,
-			citations: [],
+			content: offline.content,
+			citations: offline.citations,
 		});
+
 		return NextResponse.json({
 			ok: true,
-			data: { response: stubResponse, citations: [], sessionId },
+			data: {
+				response: offline.content,
+				citations: offline.citations,
+				sessionId,
+			},
 		});
 	}
 

@@ -188,7 +188,7 @@ export function ChatbotWidget() {
 								className={`flex flex-col gap-1 ${msg.role === "user" ? "items-end" : "items-start"}`}
 							>
 								<div
-									className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+									className={`max-w-[85%] whitespace-pre-line rounded-2xl px-3 py-2 text-sm leading-relaxed ${
 										msg.role === "user"
 											? "rounded-tr-none bg-primary text-primary-foreground"
 											: "rounded-tl-none bg-muted"

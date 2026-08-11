@@ -6,15 +6,17 @@
 // Accepts POST requests (e.g. from a form or fetch). For GET-based logout
 // (browser navigation) use the /logout page which is a server component.
 
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-export async function POST() {
+export async function POST(request: NextRequest) {
 	const supabase = await createServerSupabaseClient();
 	await supabase.auth.signOut();
 
-	return NextResponse.redirect(new URL("/", process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"), {
-		status: 302,
-	});
+	// Home on whichever origin the request arrived at. Redirecting to a
+	// hardcoded NEXT_PUBLIC_SITE_URL bounced users across hosts (127.0.0.1 →
+	// localhost, or a preview domain → production), which reads as a broken
+	// logout because the destination host has its own cookie jar.
+	return NextResponse.redirect(new URL("/", request.url), { status: 302 });
 }

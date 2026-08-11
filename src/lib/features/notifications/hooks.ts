@@ -134,9 +134,21 @@ export function useMarkAllRead() {
 // useRealtimeNotifications
 // ----------------------------------------------------------------------------
 
+// Realtime topics are global to the Supabase client: `client.channel(topic)`
+// returns the *existing* channel when one is already registered, and calling
+// `.on()` on a channel that has already subscribed throws. The header bell and
+// the notifications page both listen for the same user, so a per-user topic
+// collides between them — and `removeChannel()` is async, so a remount can race
+// its own teardown. A per-subscription suffix keeps every consumer isolated;
+// the `user_id` filter below is what actually scopes the stream.
+let realtimeChannelSeq = 0;
+
 /**
  * Subscribes to Supabase Realtime INSERT events on the notifications table
  * filtered by user_id. Calls onNotification for each new row.
+ *
+ * `onNotification` must be referentially stable (wrap it in useCallback) — it
+ * is an effect dependency, so a new identity each render resubscribes.
  */
 export function useRealtimeNotifications(
 	userId: string | null,
@@ -147,7 +159,7 @@ export function useRealtimeNotifications(
 
 		const supabase = createBrowserSupabaseClient();
 		const channel = supabase
-			.channel(`user-notifications:${userId}`)
+			.channel(`user-notifications:${userId}:${++realtimeChannelSeq}`)
 			.on(
 				"postgres_changes",
 				{

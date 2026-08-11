@@ -19,7 +19,22 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
 	return (
 		<QueryClientProvider client={queryClient}>
-			<ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+			{/*
+			  Light mode only. The app ships no theme toggle, so following the OS
+			  preference just meant dark-mode machines got an unreviewed dark UI.
+			  `forcedTheme` also overrides any stale `theme` value left in a
+			  visitor's localStorage from before this change.
+
+			  The `.dark` block in globals.css is left intact but inert — drop
+			  `forcedTheme` and restore `enableSystem` to bring dark mode back.
+			*/}
+			<ThemeProvider
+				attribute="class"
+				defaultTheme="light"
+				forcedTheme="light"
+				enableSystem={false}
+				disableTransitionOnChange
+			>
 				{children}
 				<Toaster richColors position="top-center" />
 			</ThemeProvider>

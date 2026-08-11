@@ -25,7 +25,12 @@ export function FavoriteButton({ listingId, size = "icon", className }: Favorite
 			size={size}
 			className={cn(className)}
 			disabled={busy}
-			onClick={() => void toggle()}
+			onClick={(e) => {
+				// Cards wrap this button in a Link — favoriting must not navigate.
+				e.preventDefault();
+				e.stopPropagation();
+				void toggle();
+			}}
 			aria-label={isSignedIn ? (isFavorited ? "Remove from favorites" : "Add to favorites") : "Sign in to save favorites"}
 			aria-pressed={isFavorited}
 		>

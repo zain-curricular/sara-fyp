@@ -29,16 +29,25 @@ import {
 
 type FilterTab = "all" | "open" | "resolved";
 
+// Statuses that count as still in-flight; everything else is terminal.
+const OPEN_STATUSES: DisputeStatus[] = ["open", "under_review"];
+
 function statusBadge(status: DisputeStatus) {
 	switch (status) {
 		case "open":
 			return <Badge variant="destructive">Open</Badge>;
 		case "under_review":
 			return <Badge variant="outline">Under review</Badge>;
+		case "resolved_buyer":
+			return <Badge variant="default">Resolved in your favour</Badge>;
+		case "resolved_seller":
+			return <Badge variant="secondary">Resolved for seller</Badge>;
 		case "resolved":
 			return <Badge variant="default">Resolved</Badge>;
 		case "closed":
 			return <Badge variant="secondary">Closed</Badge>;
+		case "cancelled":
+			return <Badge variant="secondary">Cancelled</Badge>;
 		default:
 			return <Badge variant="secondary">{status}</Badge>;
 	}
@@ -70,8 +79,8 @@ export default function DisputesListShell({
 	const [filter, setFilter] = useState<FilterTab>("all");
 
 	const filtered = disputes.filter((d) => {
-		if (filter === "open") return d.status === "open" || d.status === "under_review";
-		if (filter === "resolved") return d.status === "resolved" || d.status === "closed";
+		if (filter === "open") return OPEN_STATUSES.includes(d.status);
+		if (filter === "resolved") return !OPEN_STATUSES.includes(d.status);
 		return true;
 	});
 

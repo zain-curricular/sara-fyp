@@ -8,9 +8,13 @@
 // shell (auth-gated, self-hiding).
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { listBrandsWithListingCounts } from "@/lib/features/product-catalog/services";
 
 import HomeShell from "./shell";
 import type { RailListing } from "./_components/home-rails";
+
+/** Brand chips shown under the hero. */
+const BRAND_CHIP_LIMIT = 5;
 
 export default async function HomePage() {
 	const supabase = await createServerSupabaseClient();
@@ -25,5 +29,29 @@ export default async function HomePage() {
 
 	const recentListings = (data ?? []) as RailListing[];
 
-	return <HomeShell recentListings={recentListings} />;
+	// Total live inventory, for the "LIVE · N listings" badge.
+	const { count: totalListings } = await supabase
+		.from("listings")
+		.select("id", { count: "exact", head: true })
+		.eq("status", "active")
+		.is("deleted_at", null);
+
+	// Brand chips come from live inventory — the hero degrades to no chips
+	// rather than failing the whole page if the catalog query breaks.
+	const { data: brands, error: brandsError } = await listBrandsWithListingCounts("automotive");
+	if (brandsError) {
+		console.error("listBrandsWithListingCounts(automotive) failed", brandsError);
+	}
+
+	const rankedBrands = brands ?? [];
+	const brandChips = rankedBrands.slice(0, BRAND_CHIP_LIMIT);
+
+	return (
+		<HomeShell
+			recentListings={recentListings}
+			brandChips={brandChips}
+			moreBrandCount={rankedBrands.length - brandChips.length}
+			totalListings={totalListings ?? 0}
+		/>
+	);
 }

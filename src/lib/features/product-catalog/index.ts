@@ -2,6 +2,7 @@
 
 export type {
 	Brand,
+	BrandWithListingCount,
 	CatalogPlatform,
 	CatalogVariant,
 	ListingSummary,

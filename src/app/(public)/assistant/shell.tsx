@@ -59,7 +59,7 @@ function MessageBubble({ message }: { message: Message }) {
 			{/* Content */}
 			<div
 				className={cn(
-					"max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
+					"max-w-[75%] whitespace-pre-line rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
 					isUser
 						? "rounded-tr-sm bg-primary text-primary-foreground"
 						: "rounded-tl-sm bg-muted text-foreground",

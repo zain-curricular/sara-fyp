@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { apiFetch, apiFetchFormData } from "@/lib/api/client";
+import { ApiError, apiFetch, apiFetchFormData } from "@/lib/api/client";
 import { useAuthenticatedFetch } from "@/lib/hooks/useAuthenticatedFetch";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 
 import type { CreateListingWizardInput } from "@/lib/features/listings/schemas";
-import type { ListingRecord, ListingsPagination } from "@/lib/features/listings/types";
+import type { ListingImageRecord, ListingRecord, ListingsPagination } from "@/lib/features/listings/types";
 
 type Loadable<T> = {
 	data: T | null;
@@ -177,6 +177,7 @@ export function useUpdateListing() {
 	);
 }
 
+/** Uploads one photo to `POST /api/listings/[id]/images` and returns the stored record. */
 export function useUploadImages() {
 	return useCallback(async (listingId: string, file: File) => {
 		const supabase = createBrowserSupabaseClient();
@@ -185,9 +186,18 @@ export function useUploadImages() {
 		} = await supabase.auth.getSession();
 		const form = new FormData();
 		form.set("file", file);
-		return apiFetchFormData<{ ok: true; data: unknown }>(`/api/listings/${encodeURIComponent(listingId)}/images`, form, {
-			accessToken: session?.access_token,
-		});
+
+		try {
+			const result = await apiFetchFormData<{ ok: true; data: ListingImageRecord }>(
+				`/api/listings/${encodeURIComponent(listingId)}/images`,
+				form,
+				{ accessToken: session?.access_token },
+			);
+			return result.data;
+		} catch (e) {
+			//.. ApiError already carries the route's message (see toApiError).
+			throw new Error(e instanceof ApiError ? e.message : "Upload failed");
+		}
 	}, []);
 }
 

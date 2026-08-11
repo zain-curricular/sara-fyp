@@ -13,8 +13,7 @@
 
 "use client";
 
-import { useCallback, useState } from "react";
-import { useRouter } from "next/navigation";
+import { createElement, useCallback, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import {
 	Bell,
@@ -114,13 +113,12 @@ function groupByDate(notifications: NotificationRecord[]): {
 
 /**
  * Renders the correct Lucide icon for a notification type inside a circular badge.
- * The icon is looked up at render time using the module-level NOTIFICATION_ICONS map
- * and rendered via createElement to avoid the React Compiler "component in render" lint.
+ *
+ * The icon is looked up from the module-level NOTIFICATION_ICONS map and rendered
+ * as JSX — lucide icons are forwardRef components, not plain functions, so they
+ * cannot be invoked directly.
  */
 function NotificationIcon({ type, isUnread }: { type: string; isUnread: boolean }) {
-	const iconClass = cn("size-4", isUnread ? "text-primary" : "text-muted-foreground");
-	const IconEl = getIcon(type);
-
 	return (
 		<div
 			className={cn(
@@ -128,8 +126,10 @@ function NotificationIcon({ type, isUnread }: { type: string; isUnread: boolean 
 				isUnread ? "bg-primary/10" : "bg-muted",
 			)}
 		>
-			{/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-			{(IconEl as any)({ className: iconClass, "aria-hidden": true })}
+			{createElement(getIcon(type), {
+				className: cn("size-4", isUnread ? "text-primary" : "text-muted-foreground"),
+				"aria-hidden": true,
+			})}
 		</div>
 	);
 }
@@ -141,7 +141,6 @@ function NotificationRow({
 	notification: NotificationRecord;
 	onRead: (id: string) => void;
 }) {
-	const router = useRouter();
 	const isUnread = !notification.readAt;
 
 	const handleClick = () => {

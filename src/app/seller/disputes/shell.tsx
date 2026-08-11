@@ -31,8 +31,11 @@ const REASON_LABELS: Record<string, string> = {
 const STATUS_META: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
 	open: { label: "Open", variant: "outline" },
 	under_review: { label: "Under Review", variant: "secondary" },
+	resolved_buyer: { label: "Resolved (Buyer)", variant: "secondary" },
+	resolved_seller: { label: "Resolved (You)", variant: "default" },
 	resolved: { label: "Resolved", variant: "default" },
 	closed: { label: "Closed", variant: "secondary" },
+	cancelled: { label: "Cancelled", variant: "secondary" },
 };
 
 function formatDate(iso: string): string {

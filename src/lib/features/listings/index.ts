@@ -2,6 +2,13 @@
 
 export type { CategoryOption, ListingImageRecord, ListingRecord, ListingsPagination } from "./types";
 
+export {
+	IMAGE_ALLOWED_TYPES,
+	IMAGE_BUCKET,
+	IMAGE_MAX_BYTES,
+	IMAGE_MAX_PER_LISTING,
+} from "./config";
+
 export type { CreateListingWizardInput, ListingsSearchParams } from "./schemas";
 export { createListingWizardSchema, listingsSearchParamsSchema } from "./schemas";
 

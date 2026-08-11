@@ -15,12 +15,18 @@
 
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CheckCircle2, ImageIcon, Loader2, Sparkles } from "lucide-react";
 
-import type { CategoryOption, CreateListingWizardInput } from "@/lib/features/listings";
-import { useCreateListing, usePublishListing, useUploadImages } from "@/lib/features/listings";
+import type { CategoryOption, CreateListingWizardInput, ListingImageRecord } from "@/lib/features/listings";
+import {
+	IMAGE_MAX_PER_LISTING,
+	useCreateListing,
+	usePublishListing,
+	useUploadImages,
+} from "@/lib/features/listings";
 import { Badge } from "@/components/primitives/badge";
 import { Button } from "@/components/primitives/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/primitives/card";
@@ -195,6 +201,7 @@ export function CreateListingWizard({ categories }: CreateListingWizardProps) {
 	const [listingId, setListingId] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [uploaded, setUploaded] = useState<ListingImageRecord[]>([]);
 
 	// Form state
 	const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
@@ -284,7 +291,8 @@ export function CreateListingWizard({ categories }: CreateListingWizardProps) {
 		setError(null);
 		setBusy(true);
 		try {
-			await uploadImage(listingId, file);
+			const image = await uploadImage(listingId, file);
+			setUploaded((prev) => [...prev, image]);
 		} catch (e) {
 			setError(e instanceof Error ? e.message : "Upload failed");
 		} finally {
@@ -548,7 +556,28 @@ export function CreateListingWizard({ categories }: CreateListingWizardProps) {
 								<p className="text-sm text-muted-foreground">
 									Upload 4–8 photos. Clear shots from all angles improve trust and sell faster.
 								</p>
-								<ImageDropzone onFile={onUpload} disabled={busy} />
+								{uploaded.length > 0 ? (
+									<div
+										container-id="wizard-uploaded-photos"
+										className="grid grid-cols-3 gap-3 sm:grid-cols-4"
+									>
+										{uploaded.map((image) => (
+											<div
+												key={image.id}
+												className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted/30"
+											>
+												<Image src={image.url} alt="" fill sizes="120px" className="object-cover" />
+											</div>
+										))}
+									</div>
+								) : null}
+								<ImageDropzone
+									onFile={onUpload}
+									disabled={busy || uploaded.length >= IMAGE_MAX_PER_LISTING}
+								/>
+								<p className="text-xs text-muted-foreground">
+									{uploaded.length} of {IMAGE_MAX_PER_LISTING} photos uploaded.
+								</p>
 							</CardContent>
 						</Card>
 						<div className="flex items-center justify-between gap-2">

@@ -3,7 +3,11 @@
 // ============================================================================
 //
 // Explains the benefits of selling on ShopSmart: PKR payments, escrow
-// protection, and the 5% fee. Includes a CTA button to /become-a-seller.
+// protection, and the 3% fee. Includes a CTA button to /become-a-seller.
+//
+// The 3% rate is the single source of truth in `createOrder`
+// (src/lib/features/orders/services.ts) — keep this page, /terms, and the
+// help FAQs in step with that constant.
 
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -16,7 +20,7 @@ import { Separator } from "@/components/primitives/separator";
 export const metadata: Metadata = {
 	title: "Sell on ShopSmart — Pakistan's Auto Parts Marketplace",
 	description:
-		"List your auto parts on ShopSmart and reach thousands of buyers across Pakistan. PKR payments, escrow protection, and just 5% per sale.",
+		"List your auto parts on ShopSmart and reach thousands of buyers across Pakistan. PKR payments, escrow protection, and just 3% per sale.",
 };
 
 // ----------------------------------------------------------------------------
@@ -109,8 +113,8 @@ export default function SellOnShopSmartPage() {
 					/>
 					<BenefitCard
 						icon={TrendingUp}
-						title="Just 5% per sale"
-						body="No listing fees. No monthly subscriptions. Pay a flat 5% only when you make a sale."
+						title="Just 3% per sale"
+						body="No listing fees. No monthly subscriptions. Pay a flat 3% only when you make a sale."
 					/>
 					<BenefitCard
 						icon={BadgeCheck}
@@ -166,7 +170,7 @@ export default function SellOnShopSmartPage() {
 				<h2 className="text-2xl font-bold">Simple pricing</h2>
 				<div className="rounded-xl border p-6">
 					<div className="flex flex-wrap items-baseline gap-2">
-						<span className="text-4xl font-bold text-primary">5%</span>
+						<span className="text-4xl font-bold text-primary">3%</span>
 						<span className="text-muted-foreground">per successful sale</span>
 					</div>
 					<ul className="mt-4 flex flex-col gap-2 text-sm text-muted-foreground">

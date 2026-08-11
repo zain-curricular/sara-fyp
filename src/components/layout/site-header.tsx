@@ -10,17 +10,22 @@
 // NotificationBell client island for the realtime subscription.
 
 import Link from "next/link";
-import { Search, Heart, ShoppingCart } from "lucide-react";
+import { Search, Heart, ShoppingCart, LogOut } from "lucide-react";
 
+import { getServerSession } from "@/lib/auth/guards";
 import { buttonVariants } from "@/components/primitives/button";
 import { cn } from "@/lib/utils";
 
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { MessagesBell } from "@/components/layout/messages-bell";
+import { HeaderSearch } from "@/components/layout/header-search";
 
+// "Browse" enters the vehicle catalog (brand → model), "Parts" enters the
+// part-category catalog. Two distinct trees, two distinct routes — /browse
+// takes no query params, so anything like ?type=parts is silently ignored.
 const navLinks = [
 	{ label: "Browse", href: "/browse" },
-	{ label: "Parts", href: "/browse?type=parts" },
+	{ label: "Parts", href: "/parts" },
 	{ label: "Sell", href: "/seller/listings/new" },
 	{ label: "Help", href: "/help" },
 ] as const;
@@ -28,7 +33,10 @@ const navLinks = [
 const navLinkClass =
 	"text-sm font-medium text-muted-foreground transition-colors hover:text-foreground";
 
-export function SiteHeader() {
+export async function SiteHeader() {
+	// Drives the auth action on the right — sign in vs. log out.
+	const session = await getServerSession();
+
 	return (
 		<header
 			container-id="site-header"
@@ -51,15 +59,8 @@ export function SiteHeader() {
 					</span>
 				</Link>
 
-				{/* Search bar — hidden on mobile */}
-				<Link
-					href="/search"
-					container-id="site-header-search"
-					className="hidden flex-1 items-center gap-2.5 rounded-full border border-border bg-muted/50 px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted sm:flex"
-				>
-					<Search className="size-3.5 shrink-0" />
-					<span>Search parts, brands, vehicles…</span>
-				</Link>
+				{/* Search bar (client island — typing + submit) — hidden on mobile */}
+				<HeaderSearch className="hidden flex-1 sm:flex" />
 
 				{/* Desktop nav */}
 				<nav
@@ -122,12 +123,30 @@ export function SiteHeader() {
 						<span className="text-xs">Saved</span>
 					</Link>
 
-					<Link
-						href="/login"
-						className={cn(buttonVariants({ size: "sm" }))}
-					>
-						Sign in
-					</Link>
+					{/*
+					  Log out posts to the API route rather than linking to the
+					  /logout page: Next prefetches links in the viewport, and
+					  prefetching a GET route that signs you out would log the
+					  user out on its own. A form POST is never prefetched.
+					*/}
+					{session ? (
+						<form action="/api/auth/logout" method="post">
+							<button
+								type="submit"
+								className={cn(
+									buttonVariants({ variant: "outline", size: "sm" }),
+									"gap-1.5",
+								)}
+							>
+								<LogOut className="size-4" />
+								<span className="text-xs sm:text-sm">Log out</span>
+							</button>
+						</form>
+					) : (
+						<Link href="/login" className={cn(buttonVariants({ size: "sm" }))}>
+							Sign in
+						</Link>
+					)}
 				</div>
 			</div>
 		</header>

@@ -104,7 +104,7 @@ export default function TermsPage() {
 					</p>
 					<p>
 						<strong className="text-foreground">Platform fee:</strong> Sellers agree to
-						a 5% platform fee deducted from each successful sale before payout.
+						a 3% platform fee deducted from each successful sale before payout.
 					</p>
 					<p>
 						<strong className="text-foreground">Identity verification:</strong> Sellers

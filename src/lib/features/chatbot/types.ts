@@ -24,3 +24,24 @@ export type ChatSession = {
 	messages: ChatMessage[];
 	lastMessageAt: string;
 };
+
+// ----------------------------------------------------------------------------
+// Retrieval (RAG) shapes
+// ----------------------------------------------------------------------------
+
+/** A knowledge-base article returned by context retrieval. Content is truncated. */
+export type KbDoc = {
+	id: string;
+	title: string;
+	content: string;
+	slug: string | null;
+};
+
+/** An active listing returned by context retrieval, trimmed to display fields. */
+export type ContextListing = {
+	id: string;
+	title: string;
+	price: number;
+	city: string;
+	condition: string;
+};

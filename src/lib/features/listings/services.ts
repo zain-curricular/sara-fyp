@@ -5,6 +5,8 @@ import { fetchProfileReviewsPage } from "@/lib/features/reviews/services";
 import type { ReviewsListPayload } from "@/lib/features/reviews/types";
 
 import {
+	IMAGE_BUCKET,
+	IMAGE_MAX_PER_LISTING,
 	SEARCH_LIMIT_DEFAULT,
 	SEARCH_LIMIT_MAX,
 	SEARCH_PAGE_MAX,
@@ -112,6 +114,85 @@ export async function listListingImages(
 		.order("position", { ascending: true });
 
 	return { data: (data as ListingImageRecord[] | null) ?? null, error };
+}
+
+/** Failure modes the image upload can report back to the HTTP layer. */
+export type AddListingImageReason = "not_found" | "limit_reached" | "storage" | "database";
+
+export type AddListingImageResult =
+	| { data: ListingImageRecord; error: null; reason: null }
+	| { data: null; error: unknown; reason: AddListingImageReason };
+
+/**
+ * Upload one photo for a listing and record it in `listing_images`.
+ *
+ * Ownership is enforced twice — once here (so a non-owner gets a clean 404
+ * instead of an RLS error) and again by the storage/table policies, since the
+ * request runs under the caller's session rather than the service role.
+ *
+ * Objects are stored at `{ownerId}/{listingId}/{uuid}.{ext}` because the
+ * `listing-images` bucket policy keys writes on the first path segment being
+ * `auth.uid()`. Position is appended after the current highest.
+ */
+export async function addListingImage(
+	listingId: string,
+	ownerId: string,
+	file: File,
+): Promise<AddListingImageResult> {
+	const supabase = await createServerSupabaseClient();
+
+	//.. Ownership gate — deleted or someone else's listing reads as "not found".
+	const { data: listing, error: listingError } = await getListingForOwner(listingId, ownerId);
+	if (listingError) {
+		return { data: null, error: listingError, reason: "database" };
+	}
+	if (!listing) {
+		return { data: null, error: null, reason: "not_found" };
+	}
+
+	//.. Existing photos decide both the cap and the next position slot.
+	const { data: existing, error: existingError } = await listListingImages(listingId);
+	if (existingError) {
+		return { data: null, error: existingError, reason: "database" };
+	}
+
+	const images = existing ?? [];
+	if (images.length >= IMAGE_MAX_PER_LISTING) {
+		return { data: null, error: null, reason: "limit_reached" };
+	}
+
+	//.. Take the lowest free slot, not max+1 — deletions must not strand the
+	//.. listing below the cap with every remaining position near the ceiling.
+	const taken = new Set(images.map((img) => img.position));
+	let position = 0;
+	while (taken.has(position)) position += 1;
+
+	const extension = file.type === "image/jpeg" ? "jpg" : file.type.slice("image/".length);
+	const storagePath = `${ownerId}/${listingId}/${crypto.randomUUID()}.${extension}`;
+
+	const { error: uploadError } = await supabase.storage
+		.from(IMAGE_BUCKET)
+		.upload(storagePath, await file.arrayBuffer(), { contentType: file.type, upsert: false });
+
+	if (uploadError) {
+		return { data: null, error: uploadError, reason: "storage" };
+	}
+
+	const { data: publicUrl } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(storagePath);
+
+	const { data: inserted, error: insertError } = await supabase
+		.from("listing_images")
+		.insert({ listing_id: listingId, storage_path: storagePath, url: publicUrl.publicUrl, position })
+		.select("id, listing_id, storage_path, url, position")
+		.single();
+
+	//.. Roll the object back so a failed insert cannot leave an orphan in storage.
+	if (insertError) {
+		await supabase.storage.from(IMAGE_BUCKET).remove([storagePath]);
+		return { data: null, error: insertError, reason: "database" };
+	}
+
+	return { data: inserted as ListingImageRecord, error: null, reason: null };
 }
 
 /** Detail view: active listings are public; owners see their listing in any non-deleted state. */

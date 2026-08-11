@@ -85,7 +85,7 @@ function MessageBubble({ msg }: { msg: MessageWithCitations }) {
 				<Bot className="size-4 text-primary" aria-hidden />
 			</div>
 			<div className="flex max-w-[80%] flex-col gap-2">
-				<div className="rounded-2xl rounded-tl-none bg-muted px-4 py-3 text-sm leading-relaxed">
+				<div className="whitespace-pre-line rounded-2xl rounded-tl-none bg-muted px-4 py-3 text-sm leading-relaxed">
 					{msg.content}
 				</div>
 				{msg.citations && msg.citations.length > 0 && (

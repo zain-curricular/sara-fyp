@@ -15,6 +15,36 @@ type ApiFetchOptions = RequestInit & {
 	accessToken?: string;
 };
 
+/**
+ * Builds the `ApiError` for a failed response.
+ *
+ * Routes answer errors as `{ ok: false, error: "..." }` and that text is the
+ * only debuggable part — a bare `response.statusText` surfaces to users as
+ * "Unprocessable Entity", hiding messages like "Add your payout details before
+ * publishing." Prefer the body's `error`, fall back to the status line.
+ */
+async function toApiError(response: Response): Promise<ApiError> {
+	let body: unknown;
+	const text = await response.text();
+	try {
+		body = text ? JSON.parse(text) : undefined;
+	} catch {
+		body = text;
+	}
+
+	const bodyError =
+		typeof body === "object" && body !== null && "error" in body
+			? (body as { error?: unknown }).error
+			: undefined;
+
+	const message =
+		typeof bodyError === "string" && bodyError
+			? bodyError
+			: response.statusText || "Request failed";
+
+	return new ApiError(message, response.status, body);
+}
+
 /** Typed JSON fetch against the same-app API routes. */
 export async function apiFetch<T>(path: string, init: ApiFetchOptions = {}): Promise<T> {
 	const base = getMarketplaceApiBaseUrl();
@@ -34,12 +64,7 @@ export async function apiFetch<T>(path: string, init: ApiFetchOptions = {}): Pro
 		throw new Error(`API unreachable: ${msg}`);
 	}
 
-	if (!response.ok) {
-		let body: unknown;
-		const text = await response.text();
-		try { body = text ? JSON.parse(text) : undefined; } catch { body = text; }
-		throw new ApiError(response.statusText || "Request failed", response.status, body);
-	}
+	if (!response.ok) throw await toApiError(response);
 
 	if (response.status === 204) return undefined as T;
 	return response.json() as Promise<T>;
@@ -72,12 +97,7 @@ export async function apiFetchFormData<T>(
 		throw new Error(`API unreachable: ${msg}`);
 	}
 
-	if (!response.ok) {
-		let body: unknown;
-		const text = await response.text();
-		try { body = text ? JSON.parse(text) : undefined; } catch { body = text; }
-		throw new ApiError(response.statusText || "Request failed", response.status, body);
-	}
+	if (!response.ok) throw await toApiError(response);
 
 	return response.json() as Promise<T>;
 }

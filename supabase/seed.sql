@@ -709,3 +709,99 @@ INSERT INTO public.saved_addresses (
     true
   )
 ON CONFLICT (id) DO NOTHING;
+
+
+-- ============================================================================
+-- 13. Vehicle Catalog (brands + models)
+-- ============================================================================
+--
+-- The /browse catalog reads public.brands and public.models, but the vehicle
+-- data actually lives in two other places:
+--
+--   1. public.vehicles          — fitment catalog (make / model / year_from)
+--   2. public.listings.details  — seeded parts carry a "brand" key holding the
+--                                 full "Make Model" pair, e.g. "Toyota Vitz"
+--
+-- Both are folded into one pair set so every brand shown in /browse leads to
+-- models that actually have listings behind them. Slug-keyed and idempotent —
+-- re-running the seed is safe.
+
+-- Brands — one row per distinct make across both sources.
+WITH raw AS (
+  SELECT v.make AS make, v.model AS model, v.year_from AS year
+  FROM public.vehicles v
+
+  UNION ALL
+
+  SELECT split_part(l.brand, ' ', 1),
+         substr(l.brand, strpos(l.brand, ' ') + 1),
+         NULL::int
+  FROM (
+    SELECT DISTINCT details->>'brand' AS brand
+    FROM public.listings
+    WHERE details->>'brand' ~ '^\S+\s+\S'
+  ) l
+),
+pairs AS (
+  SELECT make, model, min(year) AS year
+  FROM raw
+  WHERE make <> '' AND model <> ''
+  GROUP BY make, model
+)
+INSERT INTO public.brands (platform, name, slug)
+SELECT DISTINCT
+  'automotive'::platform_type,
+  p.make,
+  lower(replace(p.make, ' ', '-'))
+FROM pairs p
+ON CONFLICT (platform, slug) DO UPDATE
+  SET name = EXCLUDED.name;
+
+-- Models — one row per distinct make+model pair, hung off the seeded brand.
+WITH raw AS (
+  SELECT v.make AS make, v.model AS model, v.year_from AS year
+  FROM public.vehicles v
+
+  UNION ALL
+
+  SELECT split_part(l.brand, ' ', 1),
+         substr(l.brand, strpos(l.brand, ' ') + 1),
+         NULL::int
+  FROM (
+    SELECT DISTINCT details->>'brand' AS brand
+    FROM public.listings
+    WHERE details->>'brand' ~ '^\S+\s+\S'
+  ) l
+),
+pairs AS (
+  SELECT make, model, min(year) AS year
+  FROM raw
+  WHERE make <> '' AND model <> ''
+  GROUP BY make, model
+)
+INSERT INTO public.models (brand_id, category_id, name, slug, year, is_active)
+SELECT
+  b.id,
+  'cccccccc-0000-0000-0000-000000000001',
+  p.model,
+  lower(replace(p.model, ' ', '-')),
+  p.year::smallint,
+  true
+FROM pairs p
+JOIN public.brands b
+  ON b.platform = 'automotive'
+ AND b.slug = lower(replace(p.make, ' ', '-'))
+ON CONFLICT (brand_id, slug) DO UPDATE
+  SET name      = EXCLUDED.name,
+      year      = EXCLUDED.year,
+      is_active = true;
+
+-- Link listings to their model so /browse/models/{id} resolves real inventory.
+UPDATE public.listings l
+SET model_id = m.id
+FROM public.models m
+JOIN public.brands b
+  ON b.id = m.brand_id
+ AND b.platform = 'automotive'
+WHERE l.model_id IS NULL
+  AND lower(l.details->>'brand') = lower(b.name || ' ' || m.name);

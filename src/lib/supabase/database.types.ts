@@ -616,6 +616,8 @@ export type Database = {
           resolution_note: string | null
           resolved_at: string | null
           resolved_by: string | null
+          seller_replied_at: string | null
+          seller_reply: string | null
           status: string
         }
         Insert: {
@@ -629,6 +631,8 @@ export type Database = {
           resolution_note?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          seller_replied_at?: string | null
+          seller_reply?: string | null
           status?: string
         }
         Update: {
@@ -642,6 +646,8 @@ export type Database = {
           resolution_note?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          seller_replied_at?: string | null
+          seller_reply?: string | null
           status?: string
         }
         Relationships: [
@@ -967,6 +973,56 @@ export type Database = {
           },
           {
             foreignKeyName: "listing_images_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "mv_trending_listings"
+            referencedColumns: ["listing_id"]
+          },
+        ]
+      }
+      listing_views: {
+        Row: {
+          id: string
+          listing_id: string
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          id?: string
+          listing_id: string
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          id?: string
+          listing_id?: string
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_views_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listing_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_views_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listing_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_views_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_views_listing_id_fkey"
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "mv_trending_listings"
@@ -2046,6 +2102,8 @@ export type Database = {
           rating: number
           reviewed_user_id: string
           reviewer_id: string
+          seller_replied_at: string | null
+          seller_reply: string | null
         }
         Insert: {
           comment?: string | null
@@ -2056,6 +2114,8 @@ export type Database = {
           rating: number
           reviewed_user_id: string
           reviewer_id: string
+          seller_replied_at?: string | null
+          seller_reply?: string | null
         }
         Update: {
           comment?: string | null
@@ -2066,6 +2126,8 @@ export type Database = {
           rating?: number
           reviewed_user_id?: string
           reviewer_id?: string
+          seller_replied_at?: string | null
+          seller_reply?: string | null
         }
         Relationships: [
           {
@@ -3020,6 +3082,7 @@ export type Database = {
       }
       set_kb_embeddings: { Args: { items: Json }; Returns: number }
       set_listing_embeddings: { Args: { items: Json }; Returns: number }
+      set_listing_image_urls: { Args: { items: Json }; Returns: number }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       transition_order: {

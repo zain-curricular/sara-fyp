@@ -15,11 +15,16 @@ import { Card, CardContent } from "@/components/primitives/card";
 export default async function PartsPage() {
 	const supabase = await createServerSupabaseClient();
 
-	const { data: categories } = await supabase
+	const { data: categories, error } = await supabase
 		.from("part_categories")
-		.select("id, name, slug, description")
+		.select("id, name, slug, icon")
 		.is("parent_id", null)
 		.order("name");
+
+	if (error) {
+		console.error("listTopLevelPartCategories failed", error);
+		throw new Error("Failed to load part categories");
+	}
 
 	return (
 		<div container-id="parts-page" className="flex flex-col flex-1 min-h-0 p-4 gap-6">
@@ -47,15 +52,14 @@ export default async function PartsPage() {
 							>
 								<Card className="h-full cursor-pointer transition-colors hover:bg-accent/50">
 									<CardContent container-id={`parts-cat-${cat.slug}`} className="flex flex-col gap-3 p-5">
-										<Box className="size-6 text-muted-foreground group-hover:text-foreground transition-colors" aria-hidden />
-										<div className="flex flex-col gap-1">
-											<p className="text-sm font-semibold leading-tight">{cat.name}</p>
-											{cat.description && (
-												<p className="text-xs text-muted-foreground line-clamp-2">
-													{cat.description}
-												</p>
-											)}
-										</div>
+
+										{/* Categories carry an emoji glyph; fall back to a generic icon. */}
+										{cat.icon ?
+											<span className="text-2xl leading-none" aria-hidden>{cat.icon}</span>
+										:	<Box className="size-6 text-muted-foreground group-hover:text-foreground transition-colors" aria-hidden />
+										}
+
+										<p className="text-sm font-semibold leading-tight">{cat.name}</p>
 									</CardContent>
 								</Card>
 							</Link>

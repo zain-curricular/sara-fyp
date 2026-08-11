@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { authenticateRequest } from "@/lib/auth/guards";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { mapOwnProfileRow } from "@/lib/features/profiles/map-own-profile";
 import { updateOwnProfileSchema } from "@/lib/features/profiles/schemas";
 
 // ----------------------------------------------------------------------------
@@ -43,34 +44,9 @@ export async function GET(): Promise<NextResponse> {
 		return NextResponse.json({ ok: false, error: "Profile not found" }, { status: 404 });
 	}
 
-	const row = data as Record<string, unknown>;
-
 	return NextResponse.json({
 		ok: true,
-		data: {
-			id: row.id,
-			role: row.role,
-			display_name: row.display_name ?? null,
-			avatar_url: row.avatar_url ?? null,
-			phone_number: row.phone_number ?? null,
-			phone_verified: row.phone_verified ?? false,
-			email: row.email ?? null,
-			city: row.city ?? null,
-			area: row.area ?? null,
-			bio: row.bio ?? null,
-			is_verified: row.is_verified ?? false,
-			is_banned: row.is_banned ?? false,
-			avg_rating: row.avg_rating ?? 0,
-			total_reviews: row.total_reviews ?? 0,
-			total_listings: row.total_listings ?? 0,
-			total_sales: row.total_sales ?? 0,
-			created_at: row.created_at,
-			updated_at: row.updated_at,
-			handle: row.handle ?? null,
-			onboarding_completed_at: row.onboarding_completed_at ?? null,
-			last_seen_at: row.last_seen_at ?? null,
-			locale: row.locale ?? "en",
-		},
+		data: mapOwnProfileRow(data as Record<string, unknown>),
 	});
 }
 
@@ -146,33 +122,8 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
 		.eq("id", auth.userId)
 		.maybeSingle();
 
-	const row = (updated ?? {}) as Record<string, unknown>;
-
 	return NextResponse.json({
 		ok: true,
-		data: {
-			id: row.id,
-			role: row.role,
-			display_name: row.display_name ?? null,
-			avatar_url: row.avatar_url ?? null,
-			phone_number: row.phone_number ?? null,
-			phone_verified: row.phone_verified ?? false,
-			email: row.email ?? null,
-			city: row.city ?? null,
-			area: row.area ?? null,
-			bio: row.bio ?? null,
-			is_verified: row.is_verified ?? false,
-			is_banned: row.is_banned ?? false,
-			avg_rating: row.avg_rating ?? 0,
-			total_reviews: row.total_reviews ?? 0,
-			total_listings: row.total_listings ?? 0,
-			total_sales: row.total_sales ?? 0,
-			created_at: row.created_at,
-			updated_at: row.updated_at,
-			handle: row.handle ?? null,
-			onboarding_completed_at: row.onboarding_completed_at ?? null,
-			last_seen_at: row.last_seen_at ?? null,
-			locale: row.locale ?? "en",
-		},
+		data: mapOwnProfileRow((updated ?? {}) as Record<string, unknown>),
 	});
 }

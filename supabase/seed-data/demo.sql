@@ -265,7 +265,7 @@ begin
 			-- Dispute rows for disputed orders.
 			if v_ss = 'disputed' then
 				insert into public.disputes (order_id, opened_by, reason, description, status, created_at)
-				values (v_oid, v_buyer, (array['wrong_item','damaged','counterfeit'])[1 + (n % 3)], 'The part did not match the listing description.', case when n % 2 = 0 then 'open' else 'reviewing' end, v_placed + interval '4 days')
+				values (v_oid, v_buyer, (array['wrong_item','damaged_item','item_not_as_described'])[1 + (n % 3)], 'The part did not match the listing description.', case when n % 2 = 0 then 'open' else 'under_review' end, v_placed + interval '4 days')
 				on conflict do nothing;
 			end if;
 

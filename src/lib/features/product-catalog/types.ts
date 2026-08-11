@@ -10,6 +10,13 @@ export type Brand = {
 	updated_at: string;
 };
 
+/** A brand plus its live active-listing total, for catalog entry points. */
+export type BrandWithListingCount = {
+	name: string;
+	slug: string;
+	listingCount: number;
+};
+
 export type Model = {
 	id: string;
 	brand_id: string;

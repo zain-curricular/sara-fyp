@@ -5,7 +5,21 @@
 // Domain types for the disputes feature.
 // Disputes are raised by buyers against orders and resolved by admins.
 
-export type DisputeStatus = "open" | "under_review" | "resolved" | "closed";
+/**
+ * Lifecycle states a dispute can occupy.
+ *
+ * `resolved_buyer` / `resolved_seller` are written by the admin resolve route
+ * and record which side the dispute was decided for; `resolved` and `closed`
+ * are the generic terminal states surfaced on the buyer and seller pages.
+ */
+export type DisputeStatus =
+	| "open"
+	| "under_review"
+	| "resolved_buyer"
+	| "resolved_seller"
+	| "resolved"
+	| "closed"
+	| "cancelled";
 
 export type DisputeReason =
 	| "item_not_received"

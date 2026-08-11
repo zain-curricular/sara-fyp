@@ -10,17 +10,33 @@
 //
 // Used in both the desktop sticky aside and the mobile stacked footer area of
 // SearchShell. No Card wrapper — the shell provides visual context.
+//
+// Instance Isolation
+// ------------------
+// Two copies of this panel are mounted at once (desktop aside + mobile stack).
+// Every DOM id and radio group name is therefore namespaced with a `useId()`
+// prefix, otherwise the two copies collide into a single native radio group and
+// the browser silently clears the checked state of the visible one.
+//
+// URL Synchronisation
+// -------------------
+// Local state seeds from `initial`, but `initial` changes whenever the URL does
+// (Apply, chip removal, back/forward). A render-phase reset keyed on the
+// serialised params re-seeds the inputs so the panel always mirrors the filters
+// actually in effect.
 
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import type { ListingsSearchParams } from "@/lib/features/listings";
 import { Button } from "@/components/primitives/button";
 import { Field, FieldLabel } from "@/components/primitives/field";
 import { Input } from "@/components/primitives/input";
+import { RadioGroup, RadioGroupItem } from "@/components/primitives/radio-group";
 import { Separator } from "@/components/primitives/separator";
+import { cn } from "@/lib/utils";
 
 // ----------------------------------------------------------------------------
 // Types
@@ -77,6 +93,16 @@ const SALE_TYPE_OPTIONS: { value: string; label: string }[] = [
 	{ value: "auction", label: "Auction" },
 ];
 
+/** Row styling for a radio option — selected rows get an accented pill. */
+function optionRowClass(selected: boolean): string {
+	return cn(
+		"flex cursor-pointer items-center gap-2.5 rounded-md border border-transparent px-2.5 py-1.5 text-sm transition-colors",
+		selected
+			? "border-primary/40 bg-primary/10 font-medium text-foreground"
+			: "text-muted-foreground hover:bg-accent hover:text-foreground",
+	);
+}
+
 // ----------------------------------------------------------------------------
 // Component
 // ----------------------------------------------------------------------------
@@ -85,13 +111,37 @@ const SALE_TYPE_OPTIONS: { value: string; label: string }[] = [
 export function SearchFiltersSidebar({ initial, basePath = "/search" }: SearchFiltersSidebarProps) {
 	const router = useRouter();
 
+	// Namespace for ids and radio group names — both panel copies share the DOM
+	const uid = useId();
+
 	// Local filter state
 	const [q, setQ] = useState(initial.q ?? "");
 	const [city, setCity] = useState(initial.city ?? "");
 	const [priceMin, setPriceMin] = useState(initial.price_min?.toString() ?? "");
 	const [priceMax, setPriceMax] = useState(initial.price_max?.toString() ?? "");
-	const [condition, setCondition] = useState(initial.condition ?? "");
-	const [saleType, setSaleType] = useState(initial.sale_type ?? "");
+	const [condition, setCondition] = useState<string>(initial.condition ?? "");
+	const [saleType, setSaleType] = useState<string>(initial.sale_type ?? "");
+
+	// Re-seed every input whenever the URL-derived params change
+	const initialKey = JSON.stringify([
+		initial.q ?? "",
+		initial.city ?? "",
+		initial.price_min ?? "",
+		initial.price_max ?? "",
+		initial.condition ?? "",
+		initial.sale_type ?? "",
+	]);
+	const [syncedKey, setSyncedKey] = useState(initialKey);
+
+	if (syncedKey !== initialKey) {
+		setSyncedKey(initialKey);
+		setQ(initial.q ?? "");
+		setCity(initial.city ?? "");
+		setPriceMin(initial.price_min?.toString() ?? "");
+		setPriceMax(initial.price_max?.toString() ?? "");
+		setCondition(initial.condition ?? "");
+		setSaleType(initial.sale_type ?? "");
+	}
 
 	/** Builds the next params object and navigates. */
 	function apply() {
@@ -117,9 +167,9 @@ export function SearchFiltersSidebar({ initial, basePath = "/search" }: SearchFi
 
 			{/* Keyword */}
 			<Field>
-				<FieldLabel htmlFor="search-q">Keyword</FieldLabel>
+				<FieldLabel htmlFor={`${uid}-q`}>Keyword</FieldLabel>
 				<Input
-					id="search-q"
+					id={`${uid}-q`}
 					value={q}
 					onChange={(e) => setQ(e.target.value)}
 					placeholder="Search title…"
@@ -130,22 +180,23 @@ export function SearchFiltersSidebar({ initial, basePath = "/search" }: SearchFi
 
 			{/* Condition */}
 			<div container-id="search-filters-condition" className="flex flex-col gap-2">
-				<span className="text-sm font-medium">Condition</span>
-				<div className="flex flex-col gap-1">
+				<span id={`${uid}-condition-label`} className="text-sm font-medium">
+					Condition
+				</span>
+				<RadioGroup
+					aria-labelledby={`${uid}-condition-label`}
+					name={`${uid}-condition`}
+					value={condition}
+					onValueChange={(value) => setCondition(String(value ?? ""))}
+					className="gap-1"
+				>
 					{CONDITION_OPTIONS.map((opt) => (
-						<label key={opt.value} className="flex items-center gap-2 cursor-pointer text-sm">
-							<input
-								type="radio"
-								name="condition"
-								value={opt.value}
-								checked={condition === opt.value}
-								onChange={() => setCondition(opt.value)}
-								className="accent-primary"
-							/>
+						<label key={opt.value} className={optionRowClass(condition === opt.value)}>
+							<RadioGroupItem value={opt.value} />
 							{opt.label}
 						</label>
 					))}
-				</div>
+				</RadioGroup>
 			</div>
 
 			<Separator />
@@ -153,9 +204,9 @@ export function SearchFiltersSidebar({ initial, basePath = "/search" }: SearchFi
 			{/* Price range */}
 			<div container-id="search-filters-price" className="grid grid-cols-2 gap-3">
 				<Field>
-					<FieldLabel htmlFor="search-pmin">Min price (Rs)</FieldLabel>
+					<FieldLabel htmlFor={`${uid}-pmin`}>Min price (Rs)</FieldLabel>
 					<Input
-						id="search-pmin"
+						id={`${uid}-pmin`}
 						inputMode="numeric"
 						value={priceMin}
 						onChange={(e) => setPriceMin(e.target.value)}
@@ -163,9 +214,9 @@ export function SearchFiltersSidebar({ initial, basePath = "/search" }: SearchFi
 					/>
 				</Field>
 				<Field>
-					<FieldLabel htmlFor="search-pmax">Max price (Rs)</FieldLabel>
+					<FieldLabel htmlFor={`${uid}-pmax`}>Max price (Rs)</FieldLabel>
 					<Input
-						id="search-pmax"
+						id={`${uid}-pmax`}
 						inputMode="numeric"
 						value={priceMax}
 						onChange={(e) => setPriceMax(e.target.value)}
@@ -178,9 +229,9 @@ export function SearchFiltersSidebar({ initial, basePath = "/search" }: SearchFi
 
 			{/* City */}
 			<Field>
-				<FieldLabel htmlFor="search-city">City</FieldLabel>
+				<FieldLabel htmlFor={`${uid}-city`}>City</FieldLabel>
 				<Input
-					id="search-city"
+					id={`${uid}-city`}
 					value={city}
 					onChange={(e) => setCity(e.target.value)}
 					placeholder="City"
@@ -191,22 +242,23 @@ export function SearchFiltersSidebar({ initial, basePath = "/search" }: SearchFi
 
 			{/* Listing type */}
 			<div container-id="search-filters-sale-type" className="flex flex-col gap-2">
-				<span className="text-sm font-medium">Listing type</span>
-				<div className="flex flex-col gap-1">
+				<span id={`${uid}-sale-type-label`} className="text-sm font-medium">
+					Listing type
+				</span>
+				<RadioGroup
+					aria-labelledby={`${uid}-sale-type-label`}
+					name={`${uid}-sale-type`}
+					value={saleType}
+					onValueChange={(value) => setSaleType(String(value ?? ""))}
+					className="gap-1"
+				>
 					{SALE_TYPE_OPTIONS.map((opt) => (
-						<label key={opt.value} className="flex items-center gap-2 cursor-pointer text-sm">
-							<input
-								type="radio"
-								name="sale_type"
-								value={opt.value}
-								checked={saleType === opt.value}
-								onChange={() => setSaleType(opt.value)}
-								className="accent-primary"
-							/>
+						<label key={opt.value} className={optionRowClass(saleType === opt.value)}>
+							<RadioGroupItem value={opt.value} />
 							{opt.label}
 						</label>
 					))}
-				</div>
+				</RadioGroup>
 			</div>
 
 			{/* Apply */}

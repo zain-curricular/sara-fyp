@@ -17,17 +17,11 @@ import { buttonVariants } from "@/components/primitives/button";
 import { Card, CardContent } from "@/components/primitives/card";
 import { cn } from "@/lib/utils";
 
+import type { BrandWithListingCount } from "@/lib/features/product-catalog";
+
 import { ForYouRail, HomeListingCard, type RailListing } from "./_components/home-rails";
 
-// ── Static content (brand chips + trust points) ─────────────────────────────
-
-const brandChips = [
-	{ label: "Toyota", count: "2,340", href: "/browse?brand=toyota" },
-	{ label: "Honda", count: "1,872", href: "/browse?brand=honda" },
-	{ label: "Suzuki", count: "1,104", href: "/browse?brand=suzuki" },
-	{ label: "KIA", count: "643", href: "/browse?brand=kia" },
-	{ label: "Yamaha", count: "418", href: "/browse?brand=yamaha" },
-] as const;
+// ── Static content (trust points) ───────────────────────────────────────────
 
 const trustPoints = [
 	{
@@ -55,7 +49,21 @@ const trustPoints = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function HomeShell({ recentListings }: { recentListings: RailListing[] }) {
+type HomeShellProps = {
+	recentListings: RailListing[];
+	/** Top brands by live inventory, already ranked by the server. */
+	brandChips: BrandWithListingCount[];
+	/** Ranked brands beyond the chips shown, for the "+N more" link. */
+	moreBrandCount: number;
+	totalListings: number;
+};
+
+export default function HomeShell({
+	recentListings,
+	brandChips,
+	moreBrandCount,
+	totalListings,
+}: HomeShellProps) {
 	return (
 		<div container-id="home-shell" className="flex flex-col gap-16">
 
@@ -114,26 +122,28 @@ export default function HomeShell({ recentListings }: { recentListings: RailList
 			>
 				<Badge className="gap-1.5 rounded-full px-3 py-1">
 					<span className="size-1.5 animate-pulse rounded-full bg-current" />
-					LIVE · 38 listings
+					LIVE · {totalListings.toLocaleString()} listing{totalListings !== 1 ? "s" : ""}
 				</Badge>
 
-				{brandChips.map(({ label, count, href }) => (
-					<Link key={label} href={href}>
+				{brandChips.map(({ name, slug, listingCount }) => (
+					<Link key={slug} href={`/browse/brands/${slug}`}>
 						<Badge
 							variant="secondary"
 							className="cursor-pointer rounded-full px-3 py-1 transition-colors hover:bg-muted"
 						>
-							{label} · {count}
+							{name} · {listingCount.toLocaleString()}
 						</Badge>
 					</Link>
 				))}
 
-				<Link
-					href="/browse"
-					className="text-xs text-muted-foreground transition-colors hover:text-foreground"
-				>
-					+18 more →
-				</Link>
+				{moreBrandCount > 0 && (
+					<Link
+						href="/browse"
+						className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+					>
+						+{moreBrandCount} more →
+					</Link>
+				)}
 			</section>
 
 			{/* ── Recommended for you (client island, auth-gated) ───────────── */}
@@ -145,7 +155,7 @@ export default function HomeShell({ recentListings }: { recentListings: RailList
 					<div className="flex items-center justify-between">
 						<h2 className="text-xl font-semibold tracking-tight">Recently listed</h2>
 						<Link
-							href="/browse?sort=newest"
+							href="/search?sort=newest"
 							className="text-xs text-muted-foreground transition-colors hover:text-foreground"
 						>
 							See all →
