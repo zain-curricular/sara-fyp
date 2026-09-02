@@ -39,6 +39,12 @@ loadEnvConfig(process.cwd());
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+// Base used to build the PUBLIC (browser-reachable) storage URLs written into
+// the DB. Defaults to SUPABASE_URL. Set SUPABASE_PUBLIC_URL when the API calls
+// go through an internal host (e.g. docker's `http://kong:8000`) but the stored
+// URLs must point at the published host port (e.g. `http://localhost:56321`).
+const PUBLIC_BASE = process.env.SUPABASE_PUBLIC_URL?.trim() || SUPABASE_URL;
+
 const BUCKET = "listing-images";
 const PREFIX = "pool";
 const BATCH = 200;
@@ -69,9 +75,9 @@ function hash(str) {
 	return h >>> 0;
 }
 
-/** Public URL for a pool object. */
+/** Public URL for a pool object (browser-reachable base). */
 function publicUrl(file) {
-	return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${PREFIX}/${file}`;
+	return `${PUBLIC_BASE}/storage/v1/object/public/${BUCKET}/${PREFIX}/${file}`;
 }
 
 // ----------------------------------------------------------------------------

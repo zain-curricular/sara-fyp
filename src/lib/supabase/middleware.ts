@@ -1,7 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-import { requirePublicSupabaseUrl, requireSupabasePublicKey } from "@/lib/supabase/env";
+import {
+	SUPABASE_AUTH_COOKIE_NAME,
+	requirePublicSupabaseUrl,
+	requireSupabasePublicKey,
+} from "@/lib/supabase/env";
 
 export async function updateSession(request: NextRequest) {
 	let response = NextResponse.next({ request });
@@ -10,6 +14,7 @@ export async function updateSession(request: NextRequest) {
 		requirePublicSupabaseUrl(),
 		requireSupabasePublicKey(),
 		{
+			cookieOptions: { name: SUPABASE_AUTH_COOKIE_NAME },
 			cookies: {
 				getAll() {
 					return request.cookies.getAll();

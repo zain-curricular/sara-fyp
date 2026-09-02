@@ -1,0 +1,20 @@
+# Build context excludes for the docker/ app image.
+# Keep the image lean and — critically — keep the host .env OUT of the image so
+# the container uses the compose-provided env (internal URLs), not host values.
+.git
+node_modules
+.next
+out
+coverage
+playwright-report
+test-results
+.env
+.env.*
+!.env.example
+npm-debug.log*
+*.log
+.DS_Store
+.vscode
+.idea
+docker/volumes/db/data
+docker/volumes/storage

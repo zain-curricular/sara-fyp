@@ -8,6 +8,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
+import { SUPABASE_AUTH_COOKIE_NAME } from "@/lib/supabase/env";
+
 const PUBLIC_ROUTES = new Set([
 	"/",
 	"/login",
@@ -53,10 +55,15 @@ export async function proxy(request: NextRequest) {
 	// Refresh session
 	let response = NextResponse.next({ request });
 
+	// Server-side (middleware always runs on the server): prefer an internal URL
+	// when set, so the app can reach the API gateway over the docker network
+	// (the public NEXT_PUBLIC_SUPABASE_URL points at a host port the container
+	// cannot dial). Falls back to the public URL — unchanged for host `npm run dev`.
 	const supabase = createServerClient(
-		process.env.NEXT_PUBLIC_SUPABASE_URL!,
+		process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
 		process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 		{
+			cookieOptions: { name: SUPABASE_AUTH_COOKIE_NAME },
 			cookies: {
 				getAll: () => request.cookies.getAll(),
 				setAll: (cookiesToSet) => {

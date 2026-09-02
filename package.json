@@ -23,7 +23,13 @@
 		"supabase:reset": "supabase db reset",
 		"supabase:gen-types": "supabase gen types typescript --local > src/lib/supabase/database.types.ts",
 		"seed:embeddings": "node supabase/scripts/backfill-embeddings.mjs",
-		"seed:images": "node supabase/scripts/upload-images.mjs"
+		"seed:images": "node supabase/scripts/upload-images.mjs",
+		"docker:up": "cd docker && docker compose up",
+		"docker:up:d": "cd docker && docker compose up -d",
+		"docker:down": "cd docker && docker compose down",
+		"docker:reset": "cd docker && docker compose down -v",
+		"docker:logs": "cd docker && docker compose logs -f",
+		"docker:build": "cd docker && docker compose build app"
 	},
 	"dependencies": {
 		"@ai-sdk/anthropic": "^3.0.71",

@@ -37,6 +37,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# …but the docker stack's env holds only local demo keys and is required for the
+# one-command `docker compose up`, so it IS committed.
+!docker/.env
 
 # vercel
 .vercel

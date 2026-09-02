@@ -1,0 +1,297 @@
+# ============================================================================
+# marketplace — full self-contained stack (Supabase + Next.js app)
+# ============================================================================
+# One command:   docker compose up          (from this folder)
+#            or:  npm run docker:up          (from repo root)
+#
+# Brings up, on a collision-safe 56xxx port range (see .env):
+#   db · kong (API gateway) · auth · rest · realtime · storage · meta · studio
+#   + migrate (applies migrations + seed)  + seed-images (uploads demo images)
+#   + app (Next.js dev server)
+#
+# Images are pinned to the exact versions the Supabase CLI uses for this project,
+# so they are already on the machine and are known-compatible with the migrations.
+# ============================================================================
+
+name: marketplace
+
+services:
+
+  db:
+    image: public.ecr.aws/supabase/postgres:17.6.1.165
+    container_name: marketplace-db
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_EXTERNAL_PORT}:5432"
+    environment:
+      POSTGRES_HOST: /var/run/postgresql
+      PGPORT: 5432
+      POSTGRES_PORT: 5432
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      POSTGRES_DB: ${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXP: ${JWT_EXPIRY}
+    volumes:
+      - db-data:/var/lib/postgresql/data:Z
+      - ./volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:Z
+      - ./volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
+      # Sorts last so it runs after the image's own auth/storage schema scripts.
+      - ./volumes/db/fix-ownership.sql:/docker-entrypoint-initdb.d/init-scripts/99-zzz-fix-ownership.sql:Z
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      # Fresh-volume init (base schema + our init scripts) takes a while; don't let
+      # early failures count against retries or dependents give up too soon.
+      start_period: 90s
+
+  auth:
+    image: public.ecr.aws/supabase/gotrue:v2.188.1
+    container_name: marketplace-auth
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
+      timeout: 5s
+      interval: 5s
+      retries: 10
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: http://localhost:${KONG_HTTP_PORT}
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      GOTRUE_SITE_URL: http://localhost:${APP_PORT}
+      GOTRUE_URI_ALLOW_LIST: "*"
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: ${JWT_EXPIRY}
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_JWT_ISSUER: http://localhost:${KONG_HTTP_PORT}/auth/v1
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
+      GOTRUE_SMS_AUTOCONFIRM: "true"
+
+  rest:
+    image: public.ecr.aws/supabase/postgrest:v14.7
+    container_name: marketplace-rest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      PGRST_DB_SCHEMAS: public,storage
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
+      PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY}
+      PGRST_DB_MAX_ROWS: 1000
+      PGRST_DB_EXTRA_SEARCH_PATH: public,extensions
+    command: ["postgrest"]
+
+  realtime:
+    image: public.ecr.aws/supabase/realtime:v2.78.18
+    container_name: realtime-dev.supabase-realtime
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: 4000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: supabase_admin
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
+      DB_AFTER_CONNECT_QUERY: 'SET search_path TO _realtime'
+      DB_ENC_KEY: ${REALTIME_DB_ENC_KEY}
+      API_JWT_SECRET: ${JWT_SECRET}
+      METRICS_JWT_SECRET: ${JWT_SECRET}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      ERL_AFLAGS: -proto_dist inet_tcp
+      DNS_NODES: "''"
+      RLIMIT_NOFILE: "10000"
+      APP_NAME: realtime
+      SEED_SELF_HOST: "true"
+      RUN_JANITOR: "true"
+
+  storage:
+    image: public.ecr.aws/supabase/storage-api:v1.44.11
+    container_name: marketplace-storage
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      rest:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:5000/status"]
+      timeout: 5s
+      interval: 5s
+      retries: 10
+    environment:
+      ANON_KEY: ${ANON_KEY}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      POSTGREST_URL: http://rest:3000
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      AUTH_JWT_SECRET: ${JWT_SECRET}
+      JWT_JWKS: ${JWT_JWKS}
+      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: stub
+      GLOBAL_S3_BUCKET: stub
+      ENABLE_IMAGE_TRANSFORMATION: "false"
+      S3_PROTOCOL_ACCESS_KEY_ID: ${S3_PROTOCOL_ACCESS_KEY_ID}
+      S3_PROTOCOL_ACCESS_KEY_SECRET: ${S3_PROTOCOL_ACCESS_KEY_SECRET}
+    volumes:
+      - storage-data:/var/lib/storage:Z
+
+  meta:
+    image: public.ecr.aws/supabase/postgres-meta:v0.96.1
+    container_name: marketplace-meta
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PG_META_PORT: 8080
+      PG_META_DB_HOST: db
+      PG_META_DB_PORT: 5432
+      PG_META_DB_NAME: ${POSTGRES_DB}
+      PG_META_DB_USER: postgres
+      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
+
+  kong:
+    image: public.ecr.aws/supabase/kong:2.8.1
+    container_name: marketplace-kong
+    restart: unless-stopped
+    depends_on:
+      auth:
+        condition: service_started
+      rest:
+        condition: service_started
+    ports:
+      - "${KONG_HTTP_PORT}:8000/tcp"
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
+      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+    volumes:
+      - ./volumes/api/kong.yml:/home/kong/temp.yml:ro
+    entrypoint:
+      - bash
+      - -c
+      - 'eval "echo \"$$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
+
+  studio:
+    image: public.ecr.aws/supabase/studio:2026.03.23-sha-b7847b7
+    container_name: marketplace-studio
+    restart: unless-stopped
+    depends_on:
+      meta:
+        condition: service_started
+    ports:
+      - "${STUDIO_PORT}:3000"
+    environment:
+      HOSTNAME: "0.0.0.0"
+      STUDIO_PG_META_URL: http://meta:8080
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DEFAULT_ORGANIZATION_NAME: ${STUDIO_DEFAULT_ORGANIZATION}
+      DEFAULT_PROJECT_NAME: ${STUDIO_DEFAULT_PROJECT}
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_PUBLIC_URL: http://localhost:${KONG_HTTP_PORT}
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      AUTH_JWT_SECRET: ${JWT_SECRET}
+      PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
+
+  # ── One-shot: apply migrations + seed (idempotent) ────────────────────────
+  migrate:
+    image: public.ecr.aws/supabase/postgres:17.6.1.165
+    container_name: marketplace-migrate
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+    volumes:
+      - ../supabase:/supabase:ro
+      - ./migrate/migrate.sh:/migrate.sh:ro
+    entrypoint: ["bash", "/migrate.sh"]
+
+  # ── One-shot: upload the committed image pool into Storage ────────────────
+  seed-images:
+    image: marketplace-app:local
+    container_name: marketplace-seed-images
+    restart: "no"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      storage:
+        condition: service_healthy
+      kong:
+        condition: service_started
+    environment:
+      # API calls go through the gateway internally; stored URLs use the
+      # browser-reachable published port.
+      NEXT_PUBLIC_SUPABASE_URL: http://kong:8000
+      SUPABASE_PUBLIC_URL: http://localhost:${KONG_HTTP_PORT}
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+    command: ["node", "supabase/scripts/upload-images.mjs"]
+
+  # ── The Next.js app ───────────────────────────────────────────────────────
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.app
+    image: marketplace-app:local
+    container_name: marketplace-app
+    restart: unless-stopped
+    depends_on:
+      kong:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${APP_PORT}:3202"
+    environment:
+      NODE_ENV: development
+      # Browser talks to the gateway via the published host port…
+      NEXT_PUBLIC_SUPABASE_URL: http://localhost:${KONG_HTTP_PORT}
+      # …server-side code reaches it over the internal docker network.
+      SUPABASE_INTERNAL_URL: http://kong:8000
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      NEXT_PUBLIC_SITE_URL: http://localhost:${APP_PORT}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+
+volumes:
+  db-data:
+  storage-data:
