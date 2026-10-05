@@ -18,6 +18,8 @@ import { useRouter } from "next/navigation";
 import type { ListingRecord, ListingsPagination, ListingsSearchParams } from "@/lib/features/listings";
 import { toListingsApiQuery } from "@/lib/features/listings";
 import { ListingCard } from "@/components/listings/listing-card";
+import { LiveRecommendationsRail } from "@/components/recommendations/live-recommendations-rail";
+import { TrackSearchFilters } from "@/components/recommendations/track-search-filters";
 import { FilterChips, type ActiveFilterChip } from "@/components/listings/filter-chips";
 import { SearchFiltersSidebar } from "@/components/listings/search-filters-sidebar";
 import { buttonVariants } from "@/components/primitives/button";
@@ -172,6 +174,15 @@ export default function SearchShell({ listings, pagination, params }: SearchShel
 					</div>
 					<FilterChips chips={chips} />
 				</header>
+
+				{/* Live recommendations — the search below feeds the engine as behaviour */}
+				<TrackSearchFilters priceMin={params.price_min} priceMax={params.price_max} query={params.q} />
+				<LiveRecommendationsRail
+					containerId="search-recommendations"
+					title="Recommended for you"
+					description="Re-ranked live from your search and the parts you open."
+					hideWhenCold
+				/>
 
 				{/* Results grid */}
 				<div

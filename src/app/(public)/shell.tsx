@@ -17,7 +17,9 @@ import { buttonVariants } from "@/components/primitives/button";
 import { Card, CardContent } from "@/components/primitives/card";
 import { cn } from "@/lib/utils";
 
-import { ForYouRail, HomeListingCard, type RailListing } from "./_components/home-rails";
+import { LiveRecommendationsRail } from "@/components/recommendations/live-recommendations-rail";
+
+import { HomeListingCard, type RailListing } from "./_components/home-rails";
 
 // ── Static content (brand chips + trust points) ─────────────────────────────
 
@@ -136,8 +138,14 @@ export default function HomeShell({ recentListings }: { recentListings: RailList
 				</Link>
 			</section>
 
-			{/* ── Recommended for you (client island, auth-gated) ───────────── */}
-			<ForYouRail />
+			{/* ── Picked for you (live — re-ranks on every view / search) ────── */}
+			<LiveRecommendationsRail
+				containerId="home-recommendations"
+				title="Picked for you"
+				description="Updates instantly as you browse — the vehicle, part and budget you lean towards."
+				coldTitle="Trending parts"
+				coldDescription="Open a couple of parts and this rail adapts to your car."
+			/>
 
 			{/* ── Recently listed (real inventory) ──────────────────────────── */}
 			{recentListings.length > 0 && (

@@ -15,6 +15,10 @@ export type ListingRecord = {
 	is_negotiable: boolean;
 	condition: string;
 	details: Record<string, unknown>;
+	/** Spare-parts condition (oem / aftermarket / used / refurbished); present on `select("*")`. */
+	listing_condition?: string | null;
+	/** Units in stock; present on `select("*")`. */
+	stock?: number | null;
 	city: string;
 	area: string | null;
 	status: string;

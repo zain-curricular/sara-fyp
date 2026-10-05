@@ -1,5 +1,6 @@
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { TastePanel } from "@/components/recommendations/taste-panel";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
 	return (
@@ -12,6 +13,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 				{children}
 			</main>
 			<SiteFooter />
+			<TastePanel />
 		</div>
 	);
 }
