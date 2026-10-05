@@ -23,6 +23,7 @@ import { buttonVariants } from "@/components/primitives/button";
 import { Badge } from "@/components/primitives/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/primitives/card";
 import { Separator } from "@/components/primitives/separator";
+import { formatNumber } from "@/lib/utils/format";
 
 // ----------------------------------------------------------------------------
 // Placeholder data
@@ -171,7 +172,7 @@ function ConversionFunnel() {
 							/>
 						</div>
 						<span className="w-10 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
-							{row.count.toLocaleString()}
+							{formatNumber(row.count)}
 						</span>
 					</div>
 				))}

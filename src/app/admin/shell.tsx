@@ -30,6 +30,7 @@ import type { AdminAction, AdminKPIs } from "@/lib/features/admin";
 import { Badge } from "@/components/primitives/badge";
 import { buttonVariants } from "@/components/primitives/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/primitives/card";
+import { formatNumber } from "@/lib/utils/format";
 
 // ----------------------------------------------------------------------------
 // KPI card
@@ -159,10 +160,10 @@ export default function AdminDashboardShell({ kpis, recentActions }: Props) {
 	}, []);
 
 	const kpiConfig = [
-		{ label: "Total Users", value: kpis.totalUsers.toLocaleString(), icon: Users },
-		{ label: "Total Sellers", value: kpis.totalSellers.toLocaleString(), icon: ShoppingCart },
-		{ label: "Active Listings", value: kpis.activeListings.toLocaleString(), icon: Package },
-		{ label: "Orders Today", value: kpis.ordersToday.toLocaleString(), icon: BarChart3 },
+		{ label: "Total Users", value: formatNumber(kpis.totalUsers), icon: Users },
+		{ label: "Total Sellers", value: formatNumber(kpis.totalSellers), icon: ShoppingCart },
+		{ label: "Active Listings", value: formatNumber(kpis.activeListings), icon: Package },
+		{ label: "Orders Today", value: formatNumber(kpis.ordersToday), icon: BarChart3 },
 		{
 			label: "GMV Today",
 			value: formatPKRCompact(kpis.gmvToday),

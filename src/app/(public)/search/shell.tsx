@@ -25,6 +25,7 @@ import { SearchFiltersSidebar } from "@/components/listings/search-filters-sideb
 import { buttonVariants } from "@/components/primitives/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/primitives/select";
 import { cn } from "@/lib/utils";
+import { formatNumber } from "@/lib/utils/format";
 
 // ----------------------------------------------------------------------------
 // Types
@@ -158,7 +159,7 @@ export default function SearchShell({ listings, pagination, params }: SearchShel
 								{params.q ? `Results for "${params.q}"` : "Browse parts"}
 							</h1>
 							<p className="text-sm text-muted-foreground tabular-nums">
-								{pagination.total.toLocaleString()} listing{pagination.total === 1 ? "" : "s"}
+								{formatNumber(pagination.total)} listing{pagination.total === 1 ? "" : "s"}
 							</p>
 						</div>
 						<Select value={params.sort ?? "newest"} onValueChange={handleSortChange}>

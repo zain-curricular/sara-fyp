@@ -6,6 +6,7 @@ import type { ViewedListPayload } from "@/lib/features/favorites";
 import { ListingCard } from "@/components/listings/listing-card";
 import { buttonVariants } from "@/components/primitives/button";
 import { cn } from "@/lib/utils";
+import { formatDateTime as formatDisplayDateTime } from "@/lib/utils/format";
 
 type ViewedShellProps = {
 	payload: ViewedListPayload;
@@ -13,7 +14,7 @@ type ViewedShellProps = {
 
 function formatViewedAt(iso: string): string {
 	try {
-		return new Date(iso).toLocaleString(undefined, {
+		return formatDisplayDateTime(iso, {
 			dateStyle: "medium",
 			timeStyle: "short",
 		});

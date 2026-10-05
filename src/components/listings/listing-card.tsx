@@ -18,6 +18,7 @@ import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { Badge } from "@/components/primitives/badge";
 import { Card, CardAction, CardContent } from "@/components/primitives/card";
 import { cn } from "@/lib/utils";
+import { formatNumber } from "@/lib/utils/format";
 
 // Human-readable labels for the condition enum values stored in the DB.
 const CONDITION_LABELS: Record<string, string> = {
@@ -82,7 +83,7 @@ export function ListingCard({ listing, className }: ListingCardProps) {
 
 					{/* Price */}
 					<p className="text-base font-bold text-primary tabular-nums">
-						Rs {listing.price.toLocaleString()}
+						Rs {formatNumber(listing.price)}
 					</p>
 
 					{/* Footer: city left, favorite right */}

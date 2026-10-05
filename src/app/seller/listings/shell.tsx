@@ -17,6 +17,7 @@ import { Badge } from "@/components/primitives/badge";
 import { buttonVariants } from "@/components/primitives/button";
 import { Card, CardContent } from "@/components/primitives/card";
 import { cn } from "@/lib/utils";
+import { formatDate as formatDisplayDate, formatNumber } from "@/lib/utils/format";
 
 // ----------------------------------------------------------------------------
 // Status config
@@ -64,7 +65,7 @@ const CONDITION_LABELS: Record<string, string> = {
 
 function formatDate(iso: string): string {
 	try {
-		return new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" });
+		return formatDisplayDate(iso, { dateStyle: "medium" });
 	} catch {
 		return iso;
 	}
@@ -95,7 +96,7 @@ function ListingRow({ listing }: { listing: ListingRecord }) {
 					<div className="flex flex-wrap items-center justify-between gap-2">
 						<div className="flex items-center gap-2">
 							<span className="text-sm font-bold tabular-nums text-primary">
-								Rs {listing.price.toLocaleString()}
+								Rs {formatNumber(listing.price)}
 							</span>
 							<Badge variant={meta.badgeVariant} className="rounded-sm text-[10px]">
 								{meta.label}
@@ -170,7 +171,7 @@ export default function SellerListingsShell({ listings }: SellerListingsShellPro
 					{ label: "Drafts", value: counts.draft },
 					{
 						label: "Revenue",
-						value: totalRevenue > 0 ? `Rs ${totalRevenue.toLocaleString()}` : "—",
+						value: totalRevenue > 0 ? `Rs ${formatNumber(totalRevenue)}` : "—",
 					},
 				].map((stat) => (
 					<Card key={stat.label} size="sm">

@@ -15,6 +15,7 @@ import { Badge } from "@/components/primitives/badge";
 import { Button } from "@/components/primitives/button";
 import { Card, CardContent } from "@/components/primitives/card";
 import { Separator } from "@/components/primitives/separator";
+import { formatDate as formatDisplayDate } from "@/lib/utils/format";
 
 // ----------------------------------------------------------------------------
 // Types
@@ -97,7 +98,7 @@ export default function MechanicCompletedShell({ requests }: MechanicCompletedSh
 											<VerdictBadge verdict={req.verdict} />
 											{req.respondedAt && (
 												<span className="text-xs text-muted-foreground">
-													{new Date(req.respondedAt).toLocaleDateString()}
+													{formatDisplayDate(req.respondedAt)}
 												</span>
 											)}
 											{req.listing?.city && (

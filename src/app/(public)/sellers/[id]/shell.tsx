@@ -24,6 +24,7 @@ import { Button } from "@/components/primitives/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/primitives/card";
 import { Separator } from "@/components/primitives/separator";
 import { cn } from "@/lib/utils";
+import { formatNumber } from "@/lib/utils/format";
 
 // ----------------------------------------------------------------------------
 // Types
@@ -197,9 +198,9 @@ export default function SellerPublicShell({ profile, reviewsInitial }: SellerPub
 			<div container-id="seller-stats" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
 				{[
 					{ label: "Avg. rating", value: profile.avg_rating.toFixed(1), accent: true },
-					{ label: "Total sales", value: profile.total_sales.toLocaleString(), accent: false },
-					{ label: "Listings", value: profile.total_listings.toLocaleString(), accent: false },
-					{ label: "Reviews", value: profile.total_reviews.toLocaleString(), accent: false },
+					{ label: "Total sales", value: formatNumber(profile.total_sales), accent: false },
+					{ label: "Listings", value: formatNumber(profile.total_listings), accent: false },
+					{ label: "Reviews", value: formatNumber(profile.total_reviews), accent: false },
 				].map((s) => (
 					<Card key={s.label} size="sm">
 						<CardContent className="flex flex-col gap-1 pt-4">

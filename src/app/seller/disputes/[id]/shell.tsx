@@ -20,6 +20,7 @@ import { buttonVariants } from "@/components/primitives/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/primitives/card";
 import { Separator } from "@/components/primitives/separator";
 import { cn } from "@/lib/utils";
+import { formatDate as formatDisplayDate } from "@/lib/utils/format";
 
 // ----------------------------------------------------------------------------
 // Config
@@ -43,7 +44,7 @@ const STATUS_META: Record<string, { label: string; variant: "default" | "seconda
 
 function formatDate(iso: string): string {
 	try {
-		return new Date(iso).toLocaleDateString(undefined, { dateStyle: "long" });
+		return formatDisplayDate(iso, { dateStyle: "long" });
 	} catch {
 		return iso;
 	}

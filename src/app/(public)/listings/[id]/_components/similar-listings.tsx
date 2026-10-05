@@ -16,6 +16,7 @@ import { MapPin, Package } from "lucide-react";
 import { Badge } from "@/components/primitives/badge";
 import { Card, CardContent } from "@/components/primitives/card";
 import { Skeleton } from "@/components/primitives/skeleton";
+import { formatNumber } from "@/lib/utils/format";
 
 // ----------------------------------------------------------------------------
 // Types
@@ -63,7 +64,7 @@ function SimilarListingCard({ listing }: { listing: SimilarListing }) {
 				<CardContent className="flex flex-col gap-1.5 pt-3">
 					<p className="line-clamp-2 text-sm font-medium leading-snug">{listing.title}</p>
 					<p className="text-base font-bold tabular-nums text-primary">
-						Rs {listing.price.toLocaleString()}
+						Rs {formatNumber(listing.price)}
 					</p>
 					<div className="flex items-center justify-between gap-1">
 						<div className="flex items-center gap-1 text-xs text-muted-foreground">

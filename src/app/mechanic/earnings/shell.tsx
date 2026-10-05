@@ -14,6 +14,7 @@ import { Badge } from "@/components/primitives/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/primitives/card";
 import { Separator } from "@/components/primitives/separator";
 import { Skeleton } from "@/components/primitives/skeleton";
+import { formatDate as formatDisplayDate, formatNumber } from "@/lib/utils/format";
 
 // ----------------------------------------------------------------------------
 // Types
@@ -85,7 +86,7 @@ export default function MechanicEarningsShell() {
 					<CardContent className="flex flex-col gap-1 pt-4">
 						<TrendingUp className="size-4 text-primary" aria-hidden />
 						<p className="text-2xl font-bold tabular-nums">
-							Rs {(data?.totals.thisMonth ?? 0).toLocaleString()}
+							Rs {formatNumber(data?.totals.thisMonth ?? 0)}
 						</p>
 						<p className="text-xs text-muted-foreground">This month</p>
 					</CardContent>
@@ -95,7 +96,7 @@ export default function MechanicEarningsShell() {
 					<CardContent className="flex flex-col gap-1 pt-4">
 						<DollarSign className="size-4 text-primary" aria-hidden />
 						<p className="text-2xl font-bold tabular-nums">
-							Rs {(data?.totals.allTime ?? 0).toLocaleString()}
+							Rs {formatNumber(data?.totals.allTime ?? 0)}
 						</p>
 						<p className="text-xs text-muted-foreground">All time</p>
 					</CardContent>
@@ -119,10 +120,10 @@ export default function MechanicEarningsShell() {
 								<div className="flex items-center justify-between gap-4 py-3">
 									<div className="flex flex-col gap-0.5">
 										<p className="text-sm font-medium tabular-nums">
-											Rs {(payout.amount ?? 0).toLocaleString()}
+											Rs {formatNumber(payout.amount ?? 0)}
 										</p>
 										<div className="flex items-center gap-2 text-xs text-muted-foreground">
-											<span>{new Date(payout.created_at).toLocaleDateString()}</span>
+											<span>{formatDisplayDate(payout.created_at)}</span>
 											{payout.reference && (
 												<>
 													<span>·</span>

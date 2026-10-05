@@ -16,6 +16,7 @@ import type { MechanicVerificationRequest } from "@/lib/features/mechanic";
 import { Badge } from "@/components/primitives/badge";
 import { Button } from "@/components/primitives/button";
 import { Card, CardContent } from "@/components/primitives/card";
+import { formatDate as formatDisplayDate } from "@/lib/utils/format";
 
 // ----------------------------------------------------------------------------
 // Types
@@ -113,7 +114,7 @@ function RequestCard({ req }: { req: MechanicVerificationRequest }) {
 					)}
 
 					<p className="text-xs text-muted-foreground">
-						{new Date(req.createdAt).toLocaleDateString()}
+						{formatDisplayDate(req.createdAt)}
 					</p>
 				</div>
 

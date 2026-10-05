@@ -21,6 +21,7 @@ import { buttonVariants } from "@/components/primitives/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/primitives/card";
 import { Separator } from "@/components/primitives/separator";
 import { cn } from "@/lib/utils";
+import { formatNumber } from "@/lib/utils/format";
 
 // ----------------------------------------------------------------------------
 // CSV template
@@ -340,7 +341,7 @@ export default function BulkUploadShell() {
 											<td className="px-3 py-2">{row.category || "—"}</td>
 											<td className="px-3 py-2">{row.condition || "—"}</td>
 											<td className="px-3 py-2 tabular-nums">
-												{row.price ? `Rs ${parseFloat(row.price).toLocaleString()}` : "—"}
+												{row.price ? `Rs ${formatNumber(parseFloat(row.price))}` : "—"}
 											</td>
 											<td className="px-3 py-2">{row.city || "—"}</td>
 											<td className="px-3 py-2">

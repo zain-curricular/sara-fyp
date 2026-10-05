@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/primitive
 import { Label } from "@/components/primitives/label";
 import { Separator } from "@/components/primitives/separator";
 import { Textarea } from "@/components/primitives/textarea";
+import { formatDate as formatDisplayDate, formatNumber } from "@/lib/utils/format";
 
 // ----------------------------------------------------------------------------
 // Types
@@ -250,7 +251,7 @@ export default function MechanicRequestDetailShell({
 					</div>
 				</div>
 				<p className="text-xs text-muted-foreground">
-					Submitted {new Date(request.createdAt).toLocaleDateString()}
+					Submitted {formatDisplayDate(request.createdAt)}
 				</p>
 			</div>
 
@@ -319,7 +320,7 @@ export default function MechanicRequestDetailShell({
 									<div>
 										<p className="text-xs text-muted-foreground">Price</p>
 										<p className="font-medium tabular-nums">
-											Rs {request.listing.price.toLocaleString()}
+											Rs {formatNumber(request.listing.price)}
 										</p>
 									</div>
 								)}
@@ -383,7 +384,7 @@ export default function MechanicRequestDetailShell({
 								)}
 								{request.respondedAt && (
 									<p className="text-xs text-muted-foreground">
-										Submitted {new Date(request.respondedAt).toLocaleDateString()}
+										Submitted {formatDisplayDate(request.respondedAt)}
 									</p>
 								)}
 							</CardContent>

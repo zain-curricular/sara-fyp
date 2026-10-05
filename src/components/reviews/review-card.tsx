@@ -11,6 +11,7 @@
 import type { ReviewRecord } from "@/lib/features/reviews";
 import { Card, CardContent } from "@/components/primitives/card";
 import { ReviewStars } from "@/components/reviews/review-stars";
+import { formatDate as formatDisplayDate } from "@/lib/utils/format";
 
 // Deterministic muted background from UUID first char — no profile fetch needed.
 const AVATAR_COLORS = [
@@ -33,7 +34,7 @@ function avatarInitial(id: string): string {
 
 function formatDate(iso: string): string {
 	try {
-		return new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" });
+		return formatDisplayDate(iso, { dateStyle: "medium" });
 	} catch {
 		return iso;
 	}
@@ -80,20 +81,17 @@ export function ReviewCard({ review }: ReviewCardProps) {
 					<p className="text-sm italic text-muted-foreground">No written feedback.</p>
 				)}
 
-				{/* Action chips */}
+				{/* Action chips — no vote counts are stored yet, so none are shown (a
+				    random placeholder count differed between server and browser and
+				    caused React hydration error #418 on every page with reviews) */}
 				<div className="flex gap-2">
-					{[
-						{ label: "Helpful", count: Math.floor(Math.random() * 12) },
-					].map((chip) => (
-						<button
-							key={chip.label}
-							type="button"
-							disabled
-							className="rounded-full border border-border px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground"
-						>
-							{chip.label} · {chip.count}
-						</button>
-					))}
+					<button
+						type="button"
+						disabled
+						className="rounded-full border border-border px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+					>
+						Helpful
+					</button>
 					<button
 						type="button"
 						disabled

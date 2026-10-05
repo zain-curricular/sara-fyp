@@ -14,6 +14,7 @@ import { Badge } from "@/components/primitives/badge";
 import { buttonVariants } from "@/components/primitives/button";
 import { Card, CardContent } from "@/components/primitives/card";
 import { cn } from "@/lib/utils";
+import { formatDate as formatDisplayDate } from "@/lib/utils/format";
 
 // ----------------------------------------------------------------------------
 // Config
@@ -37,7 +38,7 @@ const STATUS_META: Record<string, { label: string; variant: "default" | "seconda
 
 function formatDate(iso: string): string {
 	try {
-		return new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" });
+		return formatDisplayDate(iso, { dateStyle: "medium" });
 	} catch {
 		return iso;
 	}

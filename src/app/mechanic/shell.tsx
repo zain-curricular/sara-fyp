@@ -15,6 +15,7 @@ import { Badge } from "@/components/primitives/badge";
 import { Button } from "@/components/primitives/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/primitives/card";
 import { Separator } from "@/components/primitives/separator";
+import { formatDate as formatDisplayDate } from "@/lib/utils/format";
 
 // ----------------------------------------------------------------------------
 // Types
@@ -120,7 +121,7 @@ export default function MechanicDashboardShell({
 										<div className="flex items-center gap-2 text-xs text-muted-foreground">
 											{req.listing?.city && <span>{req.listing.city}</span>}
 											<span>·</span>
-											<span>{new Date(req.createdAt).toLocaleDateString()}</span>
+											<span>{formatDisplayDate(req.createdAt)}</span>
 										</div>
 									</div>
 									<div className="flex items-center gap-2">

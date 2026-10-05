@@ -29,6 +29,7 @@ import type { AnalyticsPayload } from "@/lib/features/seller-store";
 import { formatPKR } from "@/lib/utils/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/primitives/card";
 import { Skeleton } from "@/components/primitives/skeleton";
+import { formatNumber } from "@/lib/utils/format";
 
 // ----------------------------------------------------------------------------
 // Constants
@@ -153,12 +154,12 @@ export default function AnalyticsShell({ initialData }: AnalyticsShellProps) {
 			{/* KPI cards */}
 			<div container-id="analytics-kpis" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
 				<KpiCard label="Total Revenue" value={formatPKR(kpis.totalRevenue)} />
-				<KpiCard label="Total Orders" value={kpis.totalOrders.toLocaleString()} />
+				<KpiCard label="Total Orders" value={formatNumber(kpis.totalOrders)} />
 				<KpiCard
 					label="Avg Order Value"
 					value={formatPKR(kpis.avgOrderValue)}
 				/>
-				<KpiCard label="Active Listings" value={kpis.activeListings.toLocaleString()} />
+				<KpiCard label="Active Listings" value={formatNumber(kpis.activeListings)} />
 			</div>
 
 			{/* Revenue area chart */}

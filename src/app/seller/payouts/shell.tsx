@@ -17,6 +17,7 @@ import { buttonVariants } from "@/components/primitives/button";
 import { Card, CardContent } from "@/components/primitives/card";
 import { Separator } from "@/components/primitives/separator";
 import { cn } from "@/lib/utils";
+import { formatDate as formatDisplayDate } from "@/lib/utils/format";
 
 // ----------------------------------------------------------------------------
 // Status badge config
@@ -34,7 +35,7 @@ const STATUS_META: Record<
 
 function formatDateRange(start: string, end: string): string {
 	const fmt = (d: string) =>
-		new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+		formatDisplayDate(d, { month: "short", day: "numeric" });
 	return `${fmt(start)} – ${fmt(end)}`;
 }
 

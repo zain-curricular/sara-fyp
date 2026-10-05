@@ -37,6 +37,7 @@ import { Separator } from "@/components/primitives/separator";
 import { Textarea } from "@/components/primitives/textarea";
 import { ImageDropzone } from "@/components/listings/image-dropzone";
 import { cn } from "@/lib/utils";
+import { formatNumber } from "@/lib/utils/format";
 
 // ----------------------------------------------------------------------------
 // Types & constants
@@ -168,7 +169,7 @@ function ListingPreview({
 							{title || "Your listing title"}
 						</p>
 						<p className="text-xl font-bold tabular-nums text-primary">
-							{price ? `Rs ${Number(price).toLocaleString()}` : "Rs —"}
+							{price ? `Rs ${formatNumber(Number(price))}` : "Rs —"}
 						</p>
 						{city && (
 							<p className="text-xs text-muted-foreground">{city}</p>
@@ -588,7 +589,7 @@ export function CreateListingWizard({ categories }: CreateListingWizardProps) {
 									<div className="flex items-center justify-between">
 										<span className="text-muted-foreground">Price</span>
 										<span className="font-bold tabular-nums text-primary">
-											Rs {Number(price).toLocaleString()}
+											Rs {formatNumber(Number(price))}
 										</span>
 									</div>
 									<Separator />

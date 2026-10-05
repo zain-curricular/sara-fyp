@@ -36,6 +36,7 @@ import { Skeleton } from "@/components/primitives/skeleton";
 import { ContactSellerButton } from "@/components/listings/contact-seller-button";
 import { useAddToCart } from "@/lib/features/cart/hooks";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { formatNumber } from "@/lib/utils/format";
 
 // ----------------------------------------------------------------------------
 // Types
@@ -208,7 +209,7 @@ export default function ListingDetailShell({ listing, images, sellerReviews }: L
 							{showBuyNow && (
 								<div className="flex flex-col gap-2">
 									<p className="text-2xl font-bold tabular-nums text-primary">
-										Rs {listing.price.toLocaleString()}
+										Rs {formatNumber(listing.price)}
 									</p>
 									{listing.is_negotiable && (
 										<p className="text-xs text-muted-foreground">Price is negotiable</p>
@@ -239,7 +240,7 @@ export default function ListingDetailShell({ listing, images, sellerReviews }: L
 								<div className="flex flex-col gap-2">
 									{!showBuyNow && (
 										<p className="text-2xl font-bold tabular-nums text-primary">
-											Rs {listing.price.toLocaleString()}{" "}
+											Rs {formatNumber(listing.price)}{" "}
 											<span className="text-sm font-normal text-muted-foreground">current bid</span>
 										</p>
 									)}

@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/components/primitives/card";
 import { Separator } from "@/components/primitives/separator";
 import { Textarea } from "@/components/primitives/textarea";
 import { cn } from "@/lib/utils";
+import { formatDate as formatDisplayDate } from "@/lib/utils/format";
 
 // ----------------------------------------------------------------------------
 // Helpers
@@ -42,7 +43,7 @@ function StarRating({ rating }: { rating: number }) {
 
 function formatDate(iso: string): string {
 	try {
-		return new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" });
+		return formatDisplayDate(iso, { dateStyle: "medium" });
 	} catch {
 		return iso;
 	}

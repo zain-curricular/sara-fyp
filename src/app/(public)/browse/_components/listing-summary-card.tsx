@@ -12,6 +12,7 @@ import { ImageIcon, MapPin } from "lucide-react";
 import type { ListingSummary } from "@/lib/features/product-catalog";
 import { Badge } from "@/components/primitives/badge";
 import { Card, CardContent } from "@/components/primitives/card";
+import { formatNumber } from "@/lib/utils/format";
 
 const CONDITION_LABELS: Record<string, string> = {
 	new: "New",
@@ -50,7 +51,7 @@ export function ListingSummaryCard({ listing }: ListingSummaryCardProps) {
 
 					{/* Price */}
 					<p className="text-base font-bold tabular-nums text-primary">
-						Rs {listing.price.toLocaleString()}
+						Rs {formatNumber(listing.price)}
 					</p>
 
 					{/* City */}
